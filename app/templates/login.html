@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block content %}
+    <h2>ログイン</h2>
+    <form method="POST">
+        <label for="">メールアドレス</label>
+        <input type="text" name="mailaddress">
+        <label for="">パスワード</label>
+        <input type="password" name="password">
+        <input type="submit" value="ログイン" class="btn btn-primary">
+        <p class="">
+            "初めてのご利用ですか？"
+            <a href="/signup" role="bottun">アカウント登録</a>
+        </p>
+    </form>
+{% endblock %}
+

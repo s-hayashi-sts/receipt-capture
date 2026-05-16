@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+    <h2>アカウント登録</h2>
+
+    {% if error %}
+        <div class="alert alert-danger"><!-- bootstrapじゃないと使えない？-->
+            {{ error }}
+        </div>
+    {% endif %}
+    <form method="POST">
+        <label for="">メールアドレス</label>
+        <input type="text" name="mailaddress">
+        <label for="">パスワード</label>
+        <input type="password" name="password">
+        <input type="submit" value="新規登録">
+    </form>
+{% endblock %}

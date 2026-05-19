@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+    <div class="sidebar">
+        <a href="/upload">＋新規</a>
+        <a href="/report">レポート</a>
+        <a href="/record">登録履歴</a>
+    </div>
+
+    <div class="logout">
+        <a href="/logout">ログアウト</a>
+    </div>
+
+    <div class="main">
+        <form id="uploadForm" action="/upload" method="POST" enctype="multipart/form-data">
+            <input type="file" id="fileInput" name="file" onchange="document.getElementById('uploadForm').submit();">
+            <!--flask側で引数を設定する必要はない？-->
+            <!--送信ボタンはあったほうがいいか？-->
+            <button type="button" class="upload-btn" onclick="document.getElementById('fileInput').click();">
+                画像をアップロード
+            </button>
+        </form>
+    </div>
+{% endblock %}

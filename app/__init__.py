@@ -38,7 +38,7 @@ class User(UserMixin, db.Model):
     # User → Expense の 1対多
     expenses: Mapped[list["Expense"]] = relationship(back_populates="user")
 
-class Expense(db.model):
+class Expense(db.Model):
     __tablename__ = "expenses"
 
     id:Mapped[int] = mapped_column(primary_key=True)
@@ -46,7 +46,7 @@ class Expense(db.model):
     item: Mapped[str] = mapped_column(String(50), nullable=False)
     amount: Mapped[int] = mapped_column(Integer, nullable=False)
     date: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
-    
+
     # Expense → User の逆参照
     user: Mapped["User"] = relationship(back_populates="expenses")
 

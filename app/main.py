@@ -1,4 +1,5 @@
 from app import app, User, login_user, logout_user, login_required, db
+from app.receiptreader import ReceiptReader
 from flask import render_template, request, redirect
 
 from flask_bootstrap import Bootstrap
@@ -23,7 +24,7 @@ def login():
         user = User.query.filter_by(mailaddress=mailaddress).first()
         if check_password_hash(user.password, password):
             login_user(user)#引数のユーザーでログインする   
-            return redirect('/')
+            return redirect('/upload')
         #実際はユーザーが見つからない場合などの例外処理を入れる
     else:
         return render_template("login.html")
@@ -58,6 +59,22 @@ def signup():
     else:
         return render_template("signup.html")    
 
+
+@app.route('/upload', methods=['GET', 'POST'])
+def upload():
+    if request.method == 'POST':
+        file = request.files.get("file")
+        if not file:
+            return "ファイルが選択されていません"
+        
+        receiptreader = ReceiptReader(file)
+        receiptreader.file_read()
+        return redirect("/upload")
+        #return redirect("/confirmation")
+    else:
+        return render_template("upload.html")
+
+
 @app.route('/report', methods=['GET', 'POST'])
 def report():
     if request.method == 'POST':
@@ -65,3 +82,10 @@ def report():
     else:
         return render_template("report.html")
     
+
+@app.route('/confirmation', methods=['GET', 'POST'])
+def confirmation():
+    if request.method == 'POST':
+        pass
+    else:
+        return render_template("confirmation.html")  

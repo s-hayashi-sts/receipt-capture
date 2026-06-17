@@ -14,7 +14,8 @@ import os
 
 app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///receipt.db"
-app.config['SECRET_KEY'] = os.urandom(24)
+app.config['SECRET_KEY'] = "sample_key"
+#os.urandom(24)
 
 
 class Base(DeclarativeBase):
@@ -44,7 +45,7 @@ class Expense(db.Model):
     id:Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     item: Mapped[str] = mapped_column(String(50), nullable=False)
-    amount: Mapped[int] = mapped_column(Integer, nullable=False)
+    price: Mapped[int] = mapped_column(Integer, nullable=False)
     date: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
 
     # Expense → User の逆参照
@@ -52,7 +53,7 @@ class Expense(db.Model):
 
 @login_manager.user_loader#書くだけでいい
 def load_user(user_id):
-    return User.query.get(int(user_id))
+    return db.session.get(User, int(user_id))
 
 with app.app_context():
    db.create_all()

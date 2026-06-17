@@ -1,4 +1,51 @@
 {% extends "base.html" %}
 {% block content %}
+        <!-- キャンセルボタン -->
+    <button type="submit" name="action" value="cancel"
+        onclick="return confirm('内容を破棄しますか？');">
+        キャンセル
+    </button>
 
+    <br>
+
+    <table>
+        <tr>
+            <th>品目</th>
+            <th>価格</th>
+        </tr>
+        {% for item in items %}
+        <tr>
+            <td>{{ item.name }}</td>
+            <td>{{ item.price }}円</td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    <br>
+
+    <table>
+    <!--割引-->
+    <tr>
+        <td>{{ discount.name }}：</td>
+        <td>{{discount.price}}円</td>
+    </tr>
+
+    <!--税額-->
+    {% for i in tax %}
+    <tr>
+        <td>{{ i.name }}：</td>
+        <td>{{ i.price }}円</td>
+    </tr>
+    {% endfor %}
+    </table>
+
+    <h3>{{ total.name }}：{{ total.price }}円</h3>
+
+<form action="/confirmation" method="POST">
+    <!-- 編集へ -->
+    <button type="submit" name="action" value="edit">編集</button>
+
+    <!-- 登録 -->
+    <button type="submit" name="action" value="register">登録</button>
+</form>
 {% endblock %}

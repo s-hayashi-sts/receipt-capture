@@ -37,19 +37,35 @@ class User(UserMixin, db.Model):
     password: Mapped[str] = mapped_column(String(200), nullable=False)
 
     # User → Expense の 1対多
-    expenses: Mapped[list["Expense"]] = relationship(back_populates="user")
+    receipts: Mapped[list["Receipt"]] = relationship(back_populates="user")
+
+class Receipt(db.Model):
+    __tablename__ = "receipts"
+    id:Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+
+    # レシート全体の金額情報
+    total_price: Mapped[int] = mapped_column(Integer, nullable=False)  # 合計金額
+    tax: Mapped[int] = mapped_column(Integer, default=0)              # 税額
+    discount: Mapped[int] = mapped_column(Integer, default=0)         # 割引額
+
+    # 買い物した日時（明細ごとではなくレシート単位で管理）
+    date: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+
+    # リレーション設定
+    user: Mapped["User"] = relationship(back_populates="receipts")
+    expenses: Mapped[list["Expense"]] = relationship(back_populates="receipt", cascade="all, delete-orphan")
 
 class Expense(db.Model):
     __tablename__ = "expenses"
 
     id:Mapped[int] = mapped_column(primary_key=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    receipt_id: Mapped[int] = mapped_column(ForeignKey("receipts.id"), nullable=False)
     item: Mapped[str] = mapped_column(String(50), nullable=False)
     price: Mapped[int] = mapped_column(Integer, nullable=False)
-    date: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
 
-    # Expense → User の逆参照
-    user: Mapped["User"] = relationship(back_populates="expenses")
+    # リレーション設定
+    receipt: Mapped["Receipt"] = relationship(back_populates="expenses")
 
 @login_manager.user_loader#書くだけでいい
 def load_user(user_id):

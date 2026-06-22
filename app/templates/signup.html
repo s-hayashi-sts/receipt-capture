@@ -7,6 +7,18 @@
             {{ error }}
         </div>
     {% endif %}
+
+    <!--エラーをflushで取得する場合-->
+    {% with messages = get_flashed_messages %}
+    {% if messages %}
+    <ul>
+        {% for message in messages %}
+        <li class="flash">{{ message }}</li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+    {% endwith %}
+
     <form method="POST">
         <label for="">メールアドレス</label>
         <input type="text" name="mailaddress">

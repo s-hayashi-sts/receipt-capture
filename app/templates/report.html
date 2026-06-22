@@ -1,4 +1,143 @@
-{% extends "base.html" %}
-{% block content %}
-    
-{% endblock %}
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>家計簿レポート</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <div class="container my-4" style="max-width: 500px;">
+        <div class="d-flex justify-content-between align-items-center bg-dark text-white p-3 rounded-top">
+            <button id="prev-month" class="btn btn-success">&larr;</button>
+            <h4 id="calendar-title" class="m-0">2026年6月</h4>
+            <button id="next-month" class="btn btn-success">&rarr;</button>
+        </div>
+
+        <div class="bg-dark text-white p-2">
+            <div class="row text-center g-1 fw-bold text-secondary mb-2">
+                <div class="col">日</div><div class="col">月</div><div class="col">火</div>
+                <div class="col">水</div><div class="col">木</div><div class="col">金</div><div class="col">土</div>
+            </div>
+            <div id="calendar-cells" class="row g-1 text-center"></div>
+        </div>
+
+        <div class="bg-white p-4 border rounded-bottom shadow-sm">
+            <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+                <h5 id="selected-date" class="m-0">2026/6/1</h5>
+                <h5 class="m-0">合計 <span id="selected-total">0</span>円</h5>
+            </div>
+            <ul id="expense-list" class="list-group list-group-flush">
+                </ul>
+        </div>
+    </div>
+
+    <script>
+    // グローバルで現在の表示年月と選択日を管理（デフォルトは今日）
+    let currentYear = new Date().getFullYear();
+    let currentMonth = new Date().getMonth() + 1; // 1~12
+    const today = new Date();
+    //日本の時間帯に合わせて、確実に「YYYY-MM-DD」形式にする記述
+    const y = today.getFullYear();
+    const m = String(today.getMonth() + 1).padStart(2, '0');
+    const d = String(today.getDate()).padStart(2, '0');
+    let selectedDateStr = `${y}-${m}-${d}`;
+
+    document.addEventListener("DOMContentLoaded", () => {
+        renderCalendar(currentYear, currentMonth);
+        loadDailyDetail(selectedDateStr); // デフォルトで今日の詳細を表示
+
+        // 月切り替えボタンのイベント
+        document.getElementById("prev-month").addEventListener("click", () => {
+            currentMonth--;
+            if (currentMonth < 1) { currentMonth = 12; currentYear--; }
+            renderCalendar(currentYear, currentMonth);
+        });
+        document.getElementById("next-month").addEventListener("click", () => {
+            currentMonth++;
+            if (currentMonth > 12) { currentMonth = 1; currentYear++; }
+            renderCalendar(currentYear, currentMonth);
+        });
+    });
+
+    // カレンダーを描画する関数
+    async function renderCalendar(year, month) {
+        document.getElementById("calendar-title").textContent = `${year}年${month}月`;
+        const cellsContainer = document.getElementById("calendar-cells");
+        cellsContainer.innerHTML = ""; // クリア
+
+        // Flaskからその月の「日ごとの合計金額」を取得
+        const response = await fetch(`/api/monthly-summary?year=${year}&month=${month}`);
+        const dailyTotals = await response.json();
+
+        // 月の初日の曜日と、総日数を計算
+        const firstDayIndex = new Date(year, month - 1, 1).getDay();
+        const totalDays = new Date(year, month, 0).getDate();
+
+        // 空白マスの挿入（前月分の余白）
+        for (let i = 0; i < firstDayIndex; i++) {
+            cellsContainer.innerHTML += `<div class="col" style="visibility: hidden;"></div>`;
+        }
+
+        // 日付マスの生成
+        for (let day = 1; day <= totalDays; day++) {
+            const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            const total = dailyTotals[dateStr] || 0;
+            
+            // 選択中かどうかの判定クラス
+            const activeClass = (dateStr === selectedDateStr) ? 'border border-primary border-3 fw-bold' : '';
+            // 出費がある場合は金額を表現する等のテキスト
+            const priceDisplay = total > 0 ? `<div style="font-size: 0.7rem; color: #ffc107;">${total}円</div>` : '<div style="font-size: 0.7rem; visibility: hidden;">0円</div>';
+
+            const cellHtml = `
+                <div class="col-14 col text-center p-2 calendar-day-cell ${activeClass}" 
+                    style="cursor: pointer; min-width: 13%;" 
+                    onclick="onDateSelect('${dateStr}')">
+                    <div>${day}</div>
+                    ${priceDisplay}
+                </div>
+            `;
+            cellsContainer.innerHTML += cellHtml;
+        }
+    }
+
+    // 日付がクリックされた時の処理
+    function onDateSelect(dateStr) {
+        selectedDateStr = dateStr;
+        // カレンダーの枠線を更新するために再描画
+        renderCalendar(currentYear, currentMonth);
+        // 内訳をロード
+        loadDailyDetail(dateStr);
+    }
+
+    // 内訳データを取得して画面下部に反映する関数
+    async function loadDailyDetail(dateStr) {
+        const response = await fetch(`/api/daily-detail?date=${dateStr}`);
+        const data = await response.json();
+
+        // 日付と合計の書き換え
+        const displayDate = dateStr.replace(/-/g, '/');
+        document.getElementById("selected-date").textContent = displayDate;
+        document.getElementById("selected-total").textContent = data.total_price.toLocaleString();
+
+        // リストの書き換え
+        const listContainer = document.getElementById("expense-list");
+        listContainer.innerHTML = "";
+
+        if (data.items.length === 0) {
+            listContainer.innerHTML = `<li class="list-group-item text-muted text-center">この日の出費はありません</li>`;
+            return;
+        }
+
+        data.items.forEach(item => {
+            const li = document.createElement("li");
+            li.className = "list-group-item d-flex justify-content-between align-items-center px-0";
+            li.innerHTML = `
+                <span>・ ${item.item}</span>
+                <span>${item.price.toLocaleString()}円</span>
+            `;
+            listContainer.innerHTML += li.innerHTML;
+        });
+    }
+    </script>
+
+</body>

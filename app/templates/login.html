@@ -1,7 +1,25 @@
 {% extends "base.html" %}
 {% block content %}
     <h2>ログイン</h2>
-    <form method="POST">
+    <form method="POST" novalidate="novalidate">
+        {% for massage in get_flashed_messages() %}
+        <p>{{ message }}</p>
+        {% endfor %}
+        <p>{{ form.mailaddress.label }} {{ form.mailaddress(placeholder="メールアドレス") }}</p>
+        {% for error in form.mailaddress.errors %}
+        <span>{{ error }}</span>
+        {% endfor %}
+        <p>{{ form.password.label }} {{ form.password(placeholder="パスワード") }}</p>
+        {% for error in form.password.errors %}
+        <span>{{ error }}</span>
+        {% endfor %}
+        <p>{{ form.submit() }}</p>
+        <br>
+        <p class="">
+            "初めてのご利用ですか？"
+            <a href="/signup" role="bottun">アカウント登録</a>
+        </p>
+        <!--
         <label for="">メールアドレス</label>
         <input type="text" name="mailaddress">
         <label for="">パスワード</label>
@@ -11,6 +29,7 @@
             "初めてのご利用ですか？"
             <a href="/signup" role="bottun">アカウント登録</a>
         </p>
+        -->
     </form>
 {% endblock %}
 

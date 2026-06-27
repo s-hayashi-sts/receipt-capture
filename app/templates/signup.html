@@ -1,29 +1,30 @@
 {% extends "base.html" %}
 {% block content %}
     <h2>アカウント登録</h2>
-
-    {% if error %}
-        <div class="alert alert-danger"><!-- bootstrapじゃないと使えない？-->
-            {{ error }}
-        </div>
-    {% endif %}
-
-    <!--エラーをflushで取得する場合-->
-    {% with messages = get_flashed_messages %}
-    {% if messages %}
-    <ul>
-        {% for message in messages %}
-        <li class="flash">{{ message }}</li>
+    <form 
+        method="POST"
+        novalidate="novalidate"
+    >
+        {% for message in get_flashed_messages() %}
+        <p>{{ message }}</p>
         {% endfor %}
-    </ul>
-    {% endif %}
-    {% endwith %}
-
-    <form method="POST">
-        <label for="">メールアドレス</label>
+        {{ form.csrf_token }}
+        <p>
+            {{ form.mailaddress.label }} {{ form.mailaddress(placeholder="メールアドレス") }}
+        </p>
+        {% for error in form.mailaddress.errors %}
+        <span>{{ error }}</span>
+        {% endfor %}
+        <p>{{ form.password.label }}  {{ form.password(placeholder="パスワード") }}</p>
+        {% for error in form.password.errors %}
+        <span>{{ error }}</span>
+        {% endfor %}
+        <p>{{ form.submit() }}</p>
+    </form>
+    <!--<label for="">メールアドレス</label>
         <input type="text" name="mailaddress">
         <label for="">パスワード</label>
         <input type="password" name="password">
-        <input type="submit" value="新規登録">
+        <input type="submit" value="新規登録"> -->
     </form>
 {% endblock %}

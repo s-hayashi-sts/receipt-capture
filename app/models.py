@@ -18,14 +18,6 @@ class User(UserMixin, db.Model):
     # User → Expense の 1対多
     receipts: Mapped[list["Receipt"]] = relationship(back_populates="user")
 
-    # パスワードをチェック
-    def verify_password(self, password):
-        pass
-
-    # メールアドレスの重複をチェック
-    def is_duplicate_email(self):
-        pass
-
 
 @login_manager.user_loader  # 書くだけでいい
 def load_user(user_id):

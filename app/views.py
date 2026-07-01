@@ -18,22 +18,23 @@ from flask_login import (
 from sqlalchemy import func
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from apps.app.forms import LoginForm, SignUpForm
+from apps.app.forms import LoginForm, SignUpForm, UploadImageForm
 from apps.app.main import app, db
 from apps.app.models import Expense, Receipt, User
-from apps.app.receiptreader import ReceiptReader
+from apps.app.receiptreader import ReceiptReader, ReceiptValidationError
 
 # sample@sampleaddress.com
 # SampleSample00&&
+
+# 2 sample2@sampleaddress.com
+# 2 Sample2Sample00&&
 
 
 @app.route("/", methods=["GET", "POST"])
 def login():
     form = LoginForm()
     if request.method == "POST":
-        if form.validate_on_submit:
-            # mailaddress = request.form.get("mailaddress")
-            # password = request.form.get("password")
+        if form.validate_on_submit():
             user = User.query.filter_by(mailaddress=form.mailaddress.data).first()
             if user is not None and check_password_hash(
                 user.password, form.password.data
@@ -44,14 +45,12 @@ def login():
 
                 # GETパラメータにnextキーが存在し、値がない場合は /upload ページへ
                 next_ = request.args.get("next")
-                if next is None or not next_.startswith("/"):
+                if next_ is None or not next_.startswith("/"):
                     next_ = "/upload"
                 return redirect(next_)
-        else:
-            flash("メールアドレスかパスワードが不正です")
-            return render_template("login.html", form=form)
-    else:
-        return render_template("login.html", form=form)
+
+        flash("メールアドレスかパスワードが不正です")
+    return render_template("login.html", form=form)
 
 
 @app.route("/signup", methods=["GET", "POST"])
@@ -116,19 +115,37 @@ def logout():
 @app.route("/upload", methods=["GET", "POST"])
 @login_required
 def upload():
+    form = UploadImageForm()
     if request.method == "POST":
-        file = request.files.get("file")
-        if not file:
-            return "ファイルが選択されていません"
+        if form.validate_on_submit():
+            file = form.image.data
+            try:
+                receiptreader = ReceiptReader(file)
+                # 傾き・ガンマ・コントラスト補正の実行
+                image_bytes = receiptreader.deskew()
+                # Vision APIの実行
+                annotation = receiptreader.file_read(image_bytes)
+                # 文字認識の信頼度スコアのチェック
+                receiptreader.check_confidence(annotation)
+                # フォーマットチェックおよびデータ整形
+                receiptreader.reconstruct_lines(annotation)
 
-        receiptreader = ReceiptReader(file)
-        image_bytes = receiptreader.deskew()
-        annotation = receiptreader.file_read(image_bytes)
-        receiptreader.reconstruct_lines(annotation)
+                return redirect("/confirmation")
 
-        return redirect("/confirmation")
-    else:
-        return render_template("upload.html")
+            except ReceiptValidationError as e:
+                # カスタムエラーが発生した場合は、メッセージを画面に表示して再描画
+                flash(str(e))
+                return render_template("upload.html", form=form)
+
+            except Exception as e:
+                # その他の予期せぬエラー（APIエラーなど）のハンドリング
+                flash(
+                    "システムの処理中にエラーが発生しました。時間を置いて再度お試しください。"
+                )
+                print(f"Unexpected Error: {e}")  # デバッグ用にコンソールへ出力
+                return render_template("upload.html", form=form)
+
+    return render_template("upload.html", form=form)
 
 
 @app.route("/report", methods=["GET", "POST"])

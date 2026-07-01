@@ -1,23 +1,45 @@
 {% extends "base.html" %}
 {% block content %}
     <div class="sidebar">
-        <a href="/upload">＋新規</a>
-        <a href="/report">レポート</a>
-        <a href="/record">登録履歴</a>
+        <a href="/report">レポートを見る</a>
     </div>
 
-    <div class="logout">
-        <a href="/logout">ログアウト</a>
+    <h4>画像を選択</h4>
+    {% for message in get_flashed_messages() %}
+    <div class="alert alert-danger p-2 text-center" role="alert">
+        {{ message }}
     </div>
+    {% endfor %}
+    <p>アップロードする画像を選択してください</p>
+    <p>画像はレシート全体を文字がはっきり見えるように映してください</p>
+    <form
+        method="POST"
+        enctype="multipart/form-data"
+        novalidate="novalidate"
+    >
+        {{form.csrf_token}}
+        <div>
+            <label>
+            <span>{{ form.image(class="form-control-file") }}</span>
+            </label>
+        </div>
+        {% for error in form.image.errors %}
+        <span>{{ error }}</span>
+        <hr />
+        <div>
+            <label>{{ form.submit() }}</label>
+        </div>
+    </form>
 
+    <!--
     <div class="main">
         <form id="uploadForm" action="/upload" method="POST" enctype="multipart/form-data">
             <input type="file" id="fileInput" name="file" onchange="document.getElementById('uploadForm').submit();">
-            <!--flask側で引数を設定する必要はない？-->
-            <!--送信ボタンはあったほうがいいか？-->
+
             <button type="button" class="upload-btn" onclick="document.getElementById('fileInput').click();">
                 画像をアップロード
             </button>
         </form>
     </div>
+    -->
 {% endblock %}

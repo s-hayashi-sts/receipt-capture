@@ -1,4 +1,5 @@
 from flask_wtf import FlaskForm
+from flask_wtf.file import FileAllowed, FileField, FileRequired
 from wtforms import PasswordField, StringField, SubmitField
 from wtforms.validators import DataRequired, Email, length
 
@@ -30,3 +31,13 @@ class LoginForm(FlaskForm):
         "パスワード", validators=[DataRequired("パスワードは必須です")]
     )
     submit = SubmitField("ログイン")
+
+
+class UploadImageForm(FlaskForm):
+    image = FileField(
+        validators=[
+            FileRequired("画像ファイルを指定してください"),
+            FileAllowed(["png", "jpg", "jpeg"], "サポートされていない画像形式です"),
+        ]
+    )
+    submit = SubmitField("アップロード")

@@ -1,35 +1,46 @@
 {% extends "base.html" %}
 {% block content %}
-    <h2>ログイン</h2>
-    <form method="POST" novalidate="novalidate">
-        {% for massage in get_flashed_messages() %}
-        <p>{{ message }}</p>
-        {% endfor %}
-        <p>{{ form.mailaddress.label }} {{ form.mailaddress(placeholder="メールアドレス") }}</p>
-        {% for error in form.mailaddress.errors %}
-        <span>{{ error }}</span>
-        {% endfor %}
-        <p>{{ form.password.label }} {{ form.password(placeholder="パスワード") }}</p>
-        {% for error in form.password.errors %}
-        <span>{{ error }}</span>
-        {% endfor %}
-        <p>{{ form.submit() }}</p>
-        <br>
-        <p class="">
-            "初めてのご利用ですか？"
-            <a href="/signup" role="bottun">アカウント登録</a>
-        </p>
-        <!--
-        <label for="">メールアドレス</label>
-        <input type="text" name="mailaddress">
-        <label for="">パスワード</label>
-        <input type="password" name="password">
-        <input type="submit" value="ログイン" class="btn btn-primary">
-        <p class="">
-            "初めてのご利用ですか？"
-            <a href="/signup" role="bottun">アカウント登録</a>
-        </p>
-        -->
-    </form>
+<div class="row justify-content-center">
+    <div class="col-md-5">
+        <div class="card shadow-sm p-4 bg-white rounded">
+            <h2 class="text-center mb-4">ログイン</h2>
+
+            {% for message in get_flashed_messages() %}
+            <div class="alert alert-danger p-2 text-center" role="alert">
+                {{ message }}
+            </div>
+            {% endfor %}
+
+            <form method="POST" novalidate="novalidate">
+                {{ form.csrf_token }}
+
+                <div class="mb-3">
+                    {{ form.mailaddress.label(class="form-label") }}
+                    {{ form.mailaddress(class="form-control", placeholder="メールアドレス") }}
+                    {% for error in form.mailaddress.errors %}
+                    <div class="text-danger small mt-1">{{ error }}</div>
+                    {% endfor %}
+                </div>
+
+                <div class="mb-3">
+                    {{ form.password.label(class="form-label") }}
+                    {{ form.password(class="form-control", placeholder="パスワード") }}
+                    {% for error in form.password.errors %}
+                    <div class="text-danger small mt-1">{{ error }}</div>
+                    {% endfor %}
+                </div>
+
+                <div class="d-grid mt-4">
+                    {{ form.submit(class="btn btn-primary btn-lg") }}
+                </div>
+
+                <div class="text-center mt-4 pt-3 border-top">
+                    <span class="text-muted small">初めてのご利用ですか？</span>
+                    <a href="/signup" class="ms-1 small fw-bold text-decoration-none">アカウント登録</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 {% endblock %}
 

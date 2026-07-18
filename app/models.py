@@ -35,7 +35,9 @@ class Receipt(db.Model):
     discount: Mapped[int] = mapped_column(Integer, default=0)  # 割引額
 
     # 買い物した日時（レシート単位で管理）
-    date: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+    date: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.now().strftime("%Y-%m-%d %H:%M")
+    )
 
     # リレーション設定
     user: Mapped["User"] = relationship(back_populates="receipts")

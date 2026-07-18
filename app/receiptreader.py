@@ -1,5 +1,6 @@
 import copy
 import re
+from datetime import datetime
 
 import cv2
 import numpy as np
@@ -23,7 +24,7 @@ class ReceiptReader:
         nparr = np.frombuffer(self.content, np.uint8)
         self.img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
-    # ガンマ補正を組み込む補助関数
+    # ガンマ補正 後で消す
     def _adjust_gamma(self, image, gamma=1.5):
         inv = 1.0 / gamma
         table = np.array([(i / 255.0) ** inv * 255 for i in range(256)]).astype("uint8")
@@ -52,7 +53,10 @@ class ReceiptReader:
         print("angle:", angle)  # デバッグ用
 
         # ガンマ補正（暗いレシートを明るく補正）
-        brightened = self._adjust_gamma(rotated, gamma=1.5)
+        gamma = 1.5
+        inv = 1.0 / gamma
+        table = np.array([(i / 255.0) ** inv * 255 for i in range(256)]).astype("uint8")
+        brightened = cv2.LUT(rotated, table)
 
         # 3. 適応的ヒストグラム平坦化 (CLAHE) の追加（文字の輪郭をくっきりさせる）
         # CLAHEはグレースケールに適用するため、一度変換して適用後、再度カラー（または輝度調整）に反映、
@@ -113,6 +117,46 @@ class ReceiptReader:
                 "レシート全体を、ピントを合わせてまっすぐ撮影してください。"
             )
 
+    # 日時を正規表現を用いて抽出する関数
+    def extract_to_datetime(self, text):
+        # 正規表現パターン（例: "2026/07/02 22:01" や "26年07月02日 22時01" など）
+        date_pattern = re.compile(
+            r"\b(?:\d{4}|\d{2})[-/年]\d{1,2}[-/月]\d{1,2}.+?\d{1,2}[-:：時\s]\d{1,2}"
+        )
+
+        # 検索実行
+        match = date_pattern.search(text)
+
+        if not match:
+            return None  # 日時が見つからなかった場合
+
+        # マッチした文字列
+        matched_str = match.group(0)
+
+        # 文字列から数字だけをすべて取り出してリスト化
+        # 例: ['2026', '07', '02', '22', '01'] や ['26', '7', '2', '22', '01']
+        numbers = re.findall(r"\d+", matched_str)
+
+        # 各要素を整数（int）に変換
+        year = int(numbers[0])
+        month = int(numbers[1])
+        day = int(numbers[2])
+        hour = int(numbers[3])
+        minute = int(numbers[4])
+
+        # 西暦が下2桁（例: 26年）で取得されてしまった場合の補正（2000年代を想定）
+        if year < 100:
+            year += 2000
+
+        # 5. datetimeオブジェクトを生成して返す
+        try:
+            dt = datetime(year, month, day, hour, minute).strftime("%Y-%m-%d %H:%M")
+            return dt
+        except ValueError as e:
+            # 2月31日のような不正な日付だった場合のセーフティ
+            print(f"無効な日付です: {e}")
+            return None
+
     # 文字列データの整形
     def reconstruct_lines(self, annotation):
         words = []
@@ -165,37 +209,44 @@ class ReceiptReader:
 
         # linesから必要な行のみを抜き出す
         new_lines = []
-        # レシートの商品情報の記載の始まりを判定
-        start_flag = False
+        # 商品の購入日（デフォルトは現在の日時）
+        register_datetime = {
+            "name": "登録日時",
+            "datetime": datetime.now().strftime("%Y-%m-%d %H:%M"),
+        }
+        # 日付判定済みかをチェックするフラグ
+        datetime_flag = False
         # 読み取り終了判定用の正規表現
         break_pattern = re.compile(r"(合\s*計|小\s*計|お\s*釣\s*り)")
         # break_patternにヒットしたかどうかのフラグ
         has_break_pattern = False
-
         for line in lines:
-            if not start_flag:
-                # 日付・ハイフン込み電話番号・番地を除外（数字の連続が3回以上を除外）
-                if len(re.findall(r"\d+", line)) >= 3:
-                    continue
+            # 買い物をした日時を抽出
+            if not datetime_flag:
+                extract = self.extract_to_datetime(line)
+                if extract is not None:
+                    register_datetime = {"name": "登録日時", "datetime": extract}
+                    datetime_flag = True
 
-                # 4回以上の数字の連続を含む場合を除外（間にカンマが入らないため、金額でないと判断→筐体番号、登録番号など）
-                if re.search(r"\d{4,}", line):
-                    continue
+            # ハイフン込み電話番号・番地を除外（数字の連続が3回以上を除外）
+            if len(re.findall(r"\d+", line)) >= 3:
+                continue
 
-                # 数字を含まない行を除外(購買情報と関係の無いテキスト)
-                if not re.search(r"\d", line):
-                    continue
-            else:
-                start_flag = True
+            # 4回以上の数字の連続を含む場合を除外（間にカンマが入らないため、金額でないと判断→筐体番号、登録番号など）
+            if re.search(r"\d{4,}", line):
+                continue
+
+            # 数字を含まない行を除外(購買情報と関係の無いテキスト)
+            if not re.search(r"\d", line):
+                continue
 
             # 合計or小計orお釣りまで来たら処理を抜ける
             # 判定処理
             if break_pattern.search(line):
-                start_flag = False
                 has_break_pattern = True  # ヒットしたことを記録
                 break
 
-            # 品目・価格を含む文字列を新しい配列に格納
+            # 品目・価格を含む可能性のある文字列を新しい配列に格納
             new_lines.append(line)
 
         # 合計・小計・お釣りのいずれも見つからずに終了した場合エラー
@@ -212,7 +263,7 @@ class ReceiptReader:
 
         # linesを価格と品目に分割し、辞書化
         items = []
-
+        # 何の正規表現？
         pattern = re.compile(r"^(.*?)\s*￥?\s*(\d+)\D*$")
 
         for line in new_lines:
@@ -267,13 +318,15 @@ class ReceiptReader:
             if i == (len(items) - 1):
                 new_items.append(item)
 
-        # セッションに割引、税額、itemsを登録
+        # セッションに購入日時、割引、税額、items、税率計算方法を登録
+        session["register_datetime"] = register_datetime
         session["discount"] = {"name": "割引", "price": 0}
         session["tax"] = [
             {"name": "外税 8%", "price": 0},
             {"name": "外税 10%", "price": 0},
         ]
         session["receipt_items"] = new_items
+        session["tax_calc_mode"] = "all"
 
         # 合計金額の計算
         total = 0
@@ -287,6 +340,7 @@ class ReceiptReader:
         session["total_amount"] = total_amount
 
         # セッションの初期状態を保存
+        session["base_register_datetime"] = copy.deepcopy(register_datetime)
         session["base_receipt_items"] = copy.deepcopy(new_items)
         session["base_discount"] = {"name": "割引", "price": 0}
         session["base_tax"] = [

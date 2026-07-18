@@ -1,0 +1,247 @@
+{% extends "base.html" %}
+{% block content %}
+    <form action="/edit" method="POST" id="editForm">
+
+        <!-- キャンセルボタン -->
+        <button type="submit" name="action" value="cancel"
+            onclick="return confirm('編集内容を破棄しますか？');">
+            キャンセル
+        </button>
+
+        <br>
+        <!--登録日-->
+        <p>{{ register_datetime.name }}：{{ register_datetime.datetime }}</p>
+
+
+        <!-- 税計算方式の選択 -->
+        <div>
+            <label>
+                <input type="radio" name="tax_calc_mode" value="all"
+                    {% if tax_calc_mode == "all" %}checked{% endif %} 
+                    onchange="changeTaxMode()">  
+                税率ごとの小計に税率を適用（合計方式）
+            </label>
+            <label>
+                <input type="radio" name="tax_calc_mode" value="part"
+                    {% if tax_calc_mode == "part" %}checked{% endif %}
+                    onchange="changeTaxMode()">  
+                各品目ごとに税率を適用（個別方式）
+            </label>
+        </div>
+
+        <br>
+
+        <table>
+            <tr>
+                <th></th>
+                <th>品目</th>
+                <th>価格</th>
+                <th>税率</th>
+            </tr>
+
+            {% for item in items %}
+            <tr>
+                <!--削除ボタン-->
+                <td>
+                    <button type="button" data-index="{{ loop.index0 }}" onclick="deleteItem(this)">-</button>
+                </td>
+                <!--品目-->
+                <td>
+                    <input type="text" data-index="{{ loop.index0 }}" value="{{ item.name }}" onblur="updateName(this)">
+                </td>
+                <!--価格-->
+                <td>
+                   <input type="number" data-index="{{ loop.index0 }}" value="{{ item.price }}" onblur="updatePrice(this)">
+                </td>
+                <!--税率-->
+                <td>
+                    <select data-index="{{ loop.index0 }}" onchange="updateTax(this)">
+                        <option value="default" {% if item.tax_mode == "default" %}selected{% endif %}>--</option>
+                        <option value="tax8" {% if item.tax_mode == "tax8" %}selected{% endif %}>+8%</option>
+                        <option value="tax10" {% if item.tax_mode == "tax10" %}selected{% endif %}>+10%</option>
+                    </select>
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+
+        <!--追加ボタン-->
+        <button type="button" onclick="addItem()">＋追加</button>
+
+        <br>
+
+        <!--割引-->
+        <p>{{ discount.name }}：<input type="number" id="discountPrice" value="{{ discount.price }}" onblur="updateDiscount()">円
+
+        <!--税額-->
+        {% for i in tax %}
+        <p>{{ i.name }}：{{ i.price }}円</p>
+        {% endfor %}
+
+        <br>
+
+        <!--合計-->
+        <h3>{{ total.name }}：{{ total.price }}円</h3>
+
+        <!--エラーメッセージ-->
+        {% if error %}
+            <p style="color:red;">{{ error }}</p>
+        {% endif %}
+
+        <br>
+
+            <!-- 確認ボタン -->
+            <button type="submit" name="action" value="confirm">確認</button>
+    </form>
+
+    <!-- JavaScript -->
+    <script>
+    //fetchの繰り返しコードが多くて見づらい
+
+    let tax_calc_mode = "all";//税率の計算方式を判定する変数（初期値は合計方式）
+
+    //ラジオボタンで税率の計算方法を切り替える
+    function changeTaxMode() {
+        const selected = document.querySelector('input[name="tax_calc_mode"]:checked').value;
+        tax_calc_mode = selected;
+        //セッション更新
+        fetch("/edit/update", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            credentials: "include",
+            body: JSON.stringify({
+                action: "change_tax_mode",
+                tax_calc_mode: tax_calc_mode
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById("editForm").innerHTML = data.html;
+        });
+    }
+
+    //input への品目入力時
+    function updateName(input) {
+        const index = parseInt(input.dataset.index);
+        const name = input.value;
+
+        fetch("/edit/update", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            credentials: "include",
+            body: JSON.stringify({
+                action: "update_name",
+                index: index,
+                name: name, 
+                tax_calc_mode: tax_calc_mode
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById("editForm").innerHTML = data.html;
+        });
+    }
+
+    //input への金額入力時
+    function updatePrice(input) {
+        const index = parseInt(input.dataset.index);
+        const price = parseInt(input.value) || 0;
+
+        fetch("/edit/update", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            credentials: "include",
+            body: JSON.stringify({
+                action: "update_price",
+                index: index,
+                price: price, 
+                tax_calc_mode: tax_calc_mode
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById("editForm").innerHTML = data.html;
+        });
+    }
+
+
+
+    //税率の変更
+    function updateTax(selectElement) {
+        const index = parseInt(selectElement.dataset.index);
+        const tax_mode = selectElement.value;
+
+        fetch("/edit/update", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            credentials: "include",
+            body: JSON.stringify({
+                action: "update_tax",
+                index: index,
+                tax_mode: tax_mode, 
+                tax_calc_mode: tax_calc_mode
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById("editForm").innerHTML = data.html;
+        });
+    }
+
+    // 割引変更
+    function updateDiscount() {
+        const discountPrice = parseInt(document.getElementById("discountPrice").value) || 0;
+
+        fetch("/edit/update", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            credentials: "include",
+            body: JSON.stringify({
+                action: "update_discount",
+                price: discountPrice, 
+                tax_calc_mode: tax_calc_mode
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById("editForm").innerHTML = data.html;
+        });
+    }
+
+    //行の削除
+    function deleteItem(buttun) {
+        const index = parseInt(buttun.dataset.index);
+        fetch("/edit/update", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            credentials: "include",
+            body: JSON.stringify({
+                action: "delete",
+                index: index, 
+                tax_calc_mode: tax_calc_mode
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById("editForm").innerHTML = data.html;
+        });
+    }
+
+    //行の追加
+    function addItem() {
+        fetch("/edit/update", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            credentials: "include",
+            body: JSON.stringify({
+                action: "add", 
+                tax_calc_mode: tax_calc_mode
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById("editForm").innerHTML = data.html;
+        });
+    }
+    </script>
+{% endblock %}

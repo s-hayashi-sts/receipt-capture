@@ -40,4 +40,4 @@ class UploadImageForm(FlaskForm):
             FileAllowed(["png", "jpg", "jpeg"], "サポートされていない画像形式です"),
         ]
     )
-    submit = SubmitField("アップロード")
+    submit = SubmitField("画像をアップロード")

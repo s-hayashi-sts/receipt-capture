@@ -8,8 +8,6 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_wtf.csrf import CSRFProtect
 from sqlalchemy.orm import DeclarativeBase
 
-csrf = CSRFProtect()
-
 app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///receipt.db"
 app.config["SECRET_KEY"] = "sample_key"
@@ -17,6 +15,7 @@ app.config["SECRET_KEY"] = "sample_key"
 app.config["SQLAlchemy_ECHO"] = True
 app.config["DEBUG_TB_INTERCEPT_REDIRECTS"] = False  # リダイレクトを中断しないようにする
 app.config["WTF_CSRF_SECRET_KEY"] = "samplesampesamplesample"
+csrf = CSRFProtect(app)
 
 app.logger.setLevel(logging.DEBUG)
 

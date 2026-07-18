@@ -32,6 +32,10 @@ from apps.app.receiptreader import ReceiptReader, ReceiptValidationError
 
 @app.route("/", methods=["GET", "POST"])
 def login():
+    # 既にログイン済みの場合は /upload へリダイレクト
+    if current_user.is_authenticated:
+        return redirect("/upload")
+
     form = LoginForm()
     if request.method == "POST":
         if form.validate_on_submit():
@@ -108,6 +112,7 @@ def signup():
 @app.route("/logout")
 @login_required
 def logout():
+    session.clear()
     logout_user()
     return redirect("/")
 
@@ -229,6 +234,7 @@ def get_daily_detail():
 @app.route("/edit", methods=["GET", "POST"])
 @login_required
 def edit():
+    register_datetime = session.get("register_datetime", {})
     tax_calc_mode = session.get("tax_calc_mode", "all")
     items = session.get("receipt_items", [])
     discount = session.get("discount", {})
@@ -240,7 +246,10 @@ def edit():
         # キャンセル → 編集内容を破棄して /confirmation に戻る
         if action == "cancel":
             # セッションの初期化
-            session["tax_calc_mode"] = {"tax_calc_mode": "all"}
+            session["register_datetime"] = copy.deepcopy(
+                session["base_register_datetime"]
+            )
+            session["tax_calc_mode"] = "all"
             session["receipt_items"] = copy.deepcopy(session["base_receipt_items"])
             session["discount"] = copy.deepcopy(session["base_discount"])
             session["tax"] = copy.deepcopy(session["base_tax"])
@@ -250,7 +259,6 @@ def edit():
 
         # 確認ボタン → バリデーションチェックOKなら /confirmation へ
         if action == "confirm":
-            discount = discount["price"]
             error = None
 
             for i, item in enumerate(items):
@@ -261,18 +269,25 @@ def edit():
                 if not name or len(name) > 50:
                     error = "品目は50文字以内で入力してください"
                     break
-                # バリデーション(価格、割引)　整数であることを確認
-                if not isinstance(price, int):
+                # バリデーション(価格)　整数であることを確認
+                if not isinstance(price, int) or not (0 <= price <= 999999):
                     error = "価格は0〜999999の整数で入力してください"
                     break
 
-                # バリデーション(価格、割引)
-                if not (0 <= price <= 999999) or not (0 <= discount <= 999999):
-                    error = "価格は0〜999999の整数で入力してください"
+            # バリデーション（割引）
+            if not isinstance(discount["price"], int) or not (
+                0 <= discount["price"] <= 999999
+            ):
+                error = "割引は0〜999999の整数で入力してください"
+
+            # バリデーション（合計）
+            if total["price"] < 0:
+                error = "合計金額がマイナスになっています"
 
             if error:
                 return render_template(
                     "edit.html",
+                    register_datetime=register_datetime,
                     tax_calc_mode=tax_calc_mode,
                     items=items,
                     discount=discount,
@@ -285,6 +300,7 @@ def edit():
     else:
         return render_template(
             "edit.html",
+            register_datetime=register_datetime,
             tax_calc_mode=tax_calc_mode,
             items=items,
             discount=discount,
@@ -300,7 +316,17 @@ def edit_update():
     action = data.get("action")
     items = session.get("receipt_items", [])
     discount = session.get("discount", {"name": "割引", "price": 0})
-    tax_calc_mode = data.get("tax_calc_mode")
+    tax_calc_mode = data.get("tax_calc_mode", "all")
+
+    # 日時の変更
+    if action == "update_datetime":
+        new_dt = data.get("datetime")
+        # セッションの register_datetime (辞書型) 内の datetime を上書き
+        register_datetime = session.get(
+            "register_datetime", {"name": "登録日時", "datetime": ""}
+        )
+        register_datetime["datetime"] = new_dt
+        session["register_datetime"] = register_datetime
 
     # 行の削除
     if action == "delete":
@@ -329,6 +355,11 @@ def edit_update():
         index = data.get("index")
         tax_mode = data.get("tax_mode")
         items[index]["tax_mode"] = tax_mode
+
+    elif action == "all_update_tax":
+        tax_mode = data.get("tax_mode")
+        for item in items:
+            item["tax_mode"] = tax_mode
 
     # 税率の計算方法の変更
     elif action == "change_calc_mode":
@@ -415,8 +446,19 @@ def confirmation():
             tax_items = session.get("tax", [])
             tax = sum(i.get("price", 0) for i in tax_items)  # 税金の合計額
             total = session.get("total_amount", 0)
-            # 日時の取得(本番ではレシートから取得したい)
-            register_date = datetime.now()
+            # 日時の取得
+            register_datetime = session.get("register_datetime", {})
+
+            # セッションから取得した日時データをパースする
+            date_val = register_datetime.get("datetime")
+            if isinstance(date_val, str):
+                # 文字列（"YYYY-MM-DD HH:MM"）から Pythonの datetime オブジェクトに変換
+                db_date = datetime.strptime(date_val, "%Y-%m-%d %H:%M")
+            elif date_val:
+                db_date = date_val
+            else:
+                # 万が一取得できなかった場合のフォールバック（現在日時）
+                db_date = datetime.now()
 
             # DBへ保存
             # Receipt 情報
@@ -425,7 +467,7 @@ def confirmation():
                 total_price=total["price"],
                 tax=tax,
                 discount=discount["price"],
-                date=register_date,
+                date=db_date,
             )
 
             # Expence 情報
@@ -441,20 +483,33 @@ def confirmation():
             # セッションをクリア
             clear_edit_session()
 
-            return redirect("/upload")
+            return redirect("/sucseed")
     else:
+        register_datetime = session.get("register_datetime")
         items = session.get("receipt_items", [])
         discount = session.get("discount", {})
         tax = session.get("tax", [])
         total = session.get("total_amount", {})
         return render_template(
-            "confirmation.html", items=items, discount=discount, tax=tax, total=total
+            "confirmation.html",
+            register_datetime=register_datetime,
+            items=items,
+            discount=discount,
+            tax=tax,
+            total=total,
         )
+
+
+@app.route("/sucseed", methods=["GET", "POST"])
+@login_required
+def sucseed():
+    return render_template("sucseed.html")
 
 
 # セッションを削除する関数
 def clear_edit_session():
     EDIT_SESSION_KEYS = [
+        "register_datetime",
         "discount",
         "tax",
         "receipt_items",

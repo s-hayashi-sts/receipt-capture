@@ -1,45 +1,54 @@
 {% extends "base.html" %}
+
+{% block top %}
+<div class="d-flex align-items-center">
+    <a href="/report" class="btn btn-primary btn-sm fw-bold px-3">
+        <i class="bi bi-journal-text"></i> レポートを見る
+    </a>
+</div>
+{% endblock %}
+
 {% block content %}
-    <div class="sidebar">
-        <a href="/report">レポートを見る</a>
-    </div>
+<div class="container-fluid px-0 py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 d-flex justify-content-center">
+            <div class="card shadow-sm p-4 text-center bg-white rounded" style="max-width: 500px; width: 100%;">
+                
+                <h4 class="fw-bold mb-4">ファイルを選択</h4>
+                
+                {% for message in get_flashed_messages() %}
+                <div class="alert alert-danger p-2 text-center small mb-3" role="alert">
+                    {{ message }}
+                </div>
+                {% endfor %}
+                
+                <div class="alert alert-info border-0 border-start border-info border-3 text-start small mb-4 py-2 px-3">
+                    <div class="fw-bold text-info-emphasis mb-1">
+                        <i class="bi bi-info-circle-fill"></i> アップロード時の注意
+                    </div>
+                    <span class="text-dark">画像はレシート全体を文字がはっきり見えるように映してください。</span>
+                </div>
 
-    <h4>画像を選択</h4>
-    {% for message in get_flashed_messages() %}
-    <div class="alert alert-danger p-2 text-center" role="alert">
-        {{ message }}
-    </div>
-    {% endfor %}
-    <p>アップロードする画像を選択してください</p>
-    <p>画像はレシート全体を文字がはっきり見えるように映してください</p>
-    <form
-        method="POST"
-        enctype="multipart/form-data"
-        novalidate="novalidate"
-    >
-        {{form.csrf_token}}
-        <div>
-            <label>
-            <span>{{ form.image(class="form-control-file") }}</span>
-            </label>
+                <form method="POST" enctype="multipart/form-data" novalidate="novalidate">
+                    {{ form.csrf_token }}
+                    
+                    <div class="mb-4">
+                        <label class="form-label d-none">レシート画像</label>
+                        {{ form.image(class="form-control") }}
+                        
+                        {% for error in form.image.errors %}
+                        <div class="text-danger small mt-2 text-start">
+                            <i class="bi bi-exclamation-circle-fill"></i> {{ error }}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="d-grid">
+                        {{ form.submit(class="btn btn-primary fw-bold py-2 shadow-sm") }}
+                    </div>
+                </form>
+            </div>
         </div>
-        {% for error in form.image.errors %}
-        <span>{{ error }}</span>
-        <hr />
-        <div>
-            <label>{{ form.submit() }}</label>
-        </div>
-    </form>
-
-    <!--
-    <div class="main">
-        <form id="uploadForm" action="/upload" method="POST" enctype="multipart/form-data">
-            <input type="file" id="fileInput" name="file" onchange="document.getElementById('uploadForm').submit();">
-
-            <button type="button" class="upload-btn" onclick="document.getElementById('fileInput').click();">
-                画像をアップロード
-            </button>
-        </form>
     </div>
-    -->
+</div>
 {% endblock %}

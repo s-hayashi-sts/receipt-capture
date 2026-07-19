@@ -231,6 +231,27 @@ def get_daily_detail():
     )
 
 
+@app.route("/api/date-range", methods=["GET"])
+@login_required
+def get_date_range():
+    """DBに登録されている、このユーザーの最も古いレシート日付の年月を返す"""
+    earliest = (
+        db.session.query(func.min(Receipt.date))
+        .filter(Receipt.user_id == current_user.id)
+        .scalar()
+    )
+    now = datetime.now()
+    if earliest is None:
+        # データが1件もない場合は当月を最古扱いにする
+        return jsonify({"earliest_year": now.year, "earliest_month": now.month})
+
+    if isinstance(earliest, str):
+        # 環境によって文字列で返る場合があるための保険
+        earliest = datetime.strptime(earliest[:19], "%Y-%m-%d %H:%M:%S")
+
+    return jsonify({"earliest_year": earliest.year, "earliest_month": earliest.month})
+
+
 @app.route("/edit", methods=["GET", "POST"])
 @login_required
 def edit():

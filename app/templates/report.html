@@ -1,4 +1,77 @@
 {% extends "base.html" %}
+{% block top %}
+<div class="d-flex align-items-center gap-2 me-auto ms-3">
+    <a href="/upload" class="btn btn-primary btn-sm fw-bold px-3">
+        <i class="bi bi-plus-circle me-1"></i> 新規登録
+    </a>
+    <a href="/report" class="btn btn-primary btn-sm fw-bold px-3">
+        <i class="bi bi-journal-text me-1"></i> レポートを見る
+    </a>
+</div>
+{% endblock %}
 {% block content %}
-    
+<meta name="csrf-token" content="{{ csrf_token() }}">
+
+<style>
+    /* 曜日ヘッダーと日付セルを必ず同じ7列グリッドで揃えるための指定 */
+    .calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 4px;
+    }
+    .calendar-day-cell {
+        min-width: 0; /* gridなのでbootstrapのcol系min-widthは不要 */
+        border-radius: 6px;
+    }
+    /* 明るい配色に合わせて、選択中以外のセルにも軽い背景をつけて視認性を確保 */
+    .calendar-day-cell:not(.border-primary) {
+        background-color: #ffffff;
+    }
+</style>
+
+<div class="mx-auto" style="max-width: 500px;">
+
+    <!-- カレンダーヘッダー -->
+    <div class="d-flex justify-content-between align-items-center bg-light-subtle text-dark p-3 rounded-top border">
+        <button id="prev-month" class="btn btn-primary">&larr;</button>
+        <div class="text-center">
+            <h6 id="calendar-title" class="m-0 text-dark">2026年6月</h6>
+            <div class="d-flex align-items-center justify-content-center gap-2">
+                <span class="badge bg-primary text-white">合計支出</span>
+                <span class="fs-3 fw-bold text-dark" id="monthly-total">¥0</span>
+            </div>
+        </div>
+        <button id="next-month" class="btn btn-primary">&rarr;</button>
+    </div>
+
+    <!-- カレンダー曜日・セル -->
+    <div class="bg-light text-dark p-2 border-start border-end">
+        <div class="calendar-grid text-center fw-bold text-secondary mb-2">
+            <div>日</div><div>月</div><div>火</div>
+            <div>水</div><div>木</div><div>金</div><div>土</div>
+        </div>
+        <div id="calendar-cells" class="calendar-grid text-center"></div>
+    </div>
+
+    <!-- 下部：1日の詳細エリア -->
+    <div class="bg-white p-4 border rounded-bottom shadow-sm">
+        <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+            <h5 id="selected-date" class="m-0">2026/6/1</h5>
+            <div class="text-end">
+                <div class="d-flex align-items-center justify-content-center gap-2">
+                    <span class="m-0 text-dark fw-bold">合計</span>
+                    <h5 class="m-0 fw-bold"><span id="selected-total">¥0</span></h5>
+                </div>
+                <div class="text-muted small">
+                    （内消費税：<span id="selected-tax">¥0</span>）
+                </div>
+            </div>
+        </div>
+        <ul id="expense-list" class="list-group list-group-flush">
+            <!-- 外部JSによって動的に明細リストが追加されます -->
+        </ul>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/report.js') }}"></script>
 {% endblock %}

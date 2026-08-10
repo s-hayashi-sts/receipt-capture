@@ -1,67 +1,69 @@
-from app import app, User, login_user, logout_user, login_required, db
-from flask import render_template, request, redirect
+import logging
+import os
 
-from flask_bootstrap import Bootstrap
-from werkzeug.security import generate_password_hash, check_password_hash
+from flask import Flask, render_template
+from flask_debugtoolbar import DebugToolbarExtension
+from flask_login import LoginManager
+from flask_migrate import Migrate
+from flask_sqlalchemy import SQLAlchemy
+from flask_wtf.csrf import CSRFError, CSRFProtect
+from sqlalchemy.orm import DeclarativeBase
+
+from apps.app.config import config_by_name
+
+app = Flask(__name__)
+
+# 環境変数 FLASK_ENV の値（development / testing / production）に応じてconfigを切り替える
+env_name = os.environ.get("FLASK_ENV", "development")
+app.config.from_object(config_by_name[env_name])
+
+csrf = CSRFProtect(app)
+app.logger.setLevel(logging.DEBUG if app.config["DEBUG"] else logging.INFO)
 
 
-#$env:FLASK_APP="hello" ※フォルダ名と揃える！！
-#$env:FLASK_ENV="development"
-#$env:FLASK_DEBUG = "1"
-
-#sample@sampleaddress.com
-#SampleSample00&&
+# カスタムエラー画面を表示する関数
+def page_not_found(e):
+    """404 Not found"""
+    return render_template("404.html"), 404
 
 
+def internal_server_error(e):
+    """500 Internal Server Error"""
+    return render_template("500.html"), 500
 
-@app.route('/', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        mailaddress = request.form.get('mailaddress')
-        password = request.form.get('password')
 
-        user = User.query.filter_by(mailaddress=mailaddress).first()
-        if check_password_hash(user.password, password):
-            login_user(user)#引数のユーザーでログインする   
-            return redirect('/')
-        #実際はユーザーが見つからない場合などの例外処理を入れる
-    else:
-        return render_template("login.html")
+def request_entity_too_large(e):
+    """413 Request Entity Too Large"""
+    return render_template("413.html"), 413
 
-@app.route('/signup', methods=['GET', 'POST'])
-def signup():
-    if request.method == 'POST':
-        mailaddress = request.form.get('mailaddress')
-        password = request.form.get('password')
 
-        #入力チェック
-        if not mailaddress or not password:
-            return render_template("signup.html",error="メールアドレスとパスワードは必須です" )
-        
-        if len(password) < 8:
-            return render_template("signup.html",error="パスワードは8文字以上にしてください" )
-        
-        #最低大文字小文字が１文字ずつ必要
+@app.errorhandler(CSRFError)
+def csrf_error(e):
+    # CSRF期限切れ
+    return (render_template("400_csrf_error.html"), 400)
 
-        #最低一文字の数字が必要
 
-        #最低一文字の記号が必要
-        
-        if User.query.filter_by(mailaddress=mailaddress).first():
-            return render_template("signup.html", error="このメールアドレスは既に登録されています")
+# カスタムエラー画面を登録
+app.register_error_handler(404, page_not_found)
+app.register_error_handler(500, internal_server_error)
+app.register_error_handler(413, request_entity_too_large)
 
-        user = User(mailaddress=mailaddress, password=generate_password_hash(password, method='pbkdf2:sha256'))
 
-        db.session.add(user)
-        db.session.commit()
-        return redirect('/')
-    else:
-        return render_template("signup.html")    
+# Debug Toolbarは開発環境でのみ有効化
+if app.config["DEBUG"]:
+    toolbar = DebugToolbarExtension(app)
 
-@app.route('/report', methods=['GET', 'POST'])
-def report():
-    if request.method == 'POST':
-        pass
-    else:
-        return render_template("report.html")
-    
+
+class Base(DeclarativeBase):
+    pass
+
+
+db = SQLAlchemy(model_class=Base)
+db.init_app(app)
+
+Migrate(app, db)
+
+login_manager = LoginManager()
+login_manager.login_view = "login"
+login_manager.login_message = ""
+login_manager.init_app(app)

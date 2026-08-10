@@ -1,17 +1,41 @@
 {% extends "base.html" %}
 {% block content %}
-    <h2>アカウント登録</h2>
+<div class="row justify-content-center">
+    <div class="col-md-5">
+        <div class="card shadow-sm p-4 bg-white rounded">
+            <h2 class="text-center mb-4">アカウント登録</h2>
 
-    {% if error %}
-        <div class="alert alert-danger"><!-- bootstrapじゃないと使えない？-->
-            {{ error }}
+            {% for message in get_flashed_messages() %}
+            <div class="alert alert-danger p-2 text-center" role="alert">
+                {{ message }}
+            </div>
+            {% endfor %}
+
+            <form method="POST" novalidate="novalidate">
+                {{ form.csrf_token }}
+
+                <div class="mb-3">
+                    {{ form.mailaddress.label(class="form-label") }} 
+                    {{ form.mailaddress(class="form-control", placeholder="メールアドレス") }}
+                    {% for error in form.mailaddress.errors %}
+                    <div class="text-danger small mt-1">{{ error }}</div>
+                    {% endfor %}
+                </div>
+
+                <div class="mb-3">
+                    {{ form.password.label(class="form-label") }}
+                    {{ form.password(class="form-control", placeholder="パスワード") }}
+                    {% for error in form.password.errors %}
+                    <div class="text-danger small mt-1">{{ error }}</div>
+                    {% endfor %}
+                </div>
+
+                <div class="d-grid mt-4">
+                    {{ form.submit(class="btn btn-primary btn-lg") }}
+                </div>
+            </form>
         </div>
-    {% endif %}
-    <form method="POST">
-        <label for="">メールアドレス</label>
-        <input type="text" name="mailaddress">
-        <label for="">パスワード</label>
-        <input type="password" name="password">
-        <input type="submit" value="新規登録">
-    </form>
+    </div>
+</div>
+
 {% endblock %}

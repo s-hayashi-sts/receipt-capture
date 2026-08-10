@@ -1,0 +1,107 @@
+<div class="card card-body bg-light mb-4 p-3 border-0">
+    <label class="form-label fw-bold text-secondary mb-2">税計算方式</label>
+    <div class="d-flex flex-column flex-sm-row gap-3">
+        <div class="form-check">
+            <input class="form-check-input" type="radio" name="tax_calc_mode" id="modeAll" value="all"
+                   {% if tax_calc_mode == "all" or not tax_calc_mode %}checked{% endif %} onchange="changeTaxMode()">
+            <label class="form-check-label text-dark" for="modeAll">
+                税率ごとの小計に税率を適用（合計方式）
+            </label>
+        </div>
+        <div class="form-check">
+            <input class="form-check-input" type="radio" name="tax_calc_mode" id="modePart" value="part"
+                   {% if tax_calc_mode == "part" %}checked{% endif %} onchange="changeTaxMode()">
+            <label class="form-check-label text-dark" for="modePart">
+                各品目ごとに税率を適用（個別方式）
+            </label>
+        </div>
+    </div>
+</div>
+
+<div class="row g-2 align-items-center mb-3">
+    <div class="col-auto">
+        <label for="allTaxSelect" class="col-form-label text-secondary small fw-bold">
+            <i class="bi bi-arrow-right-square-fill me-1"></i> 全品目の税率を一括変更:
+        </label>
+    </div>
+    <div class="col-auto">
+        <select id="allTaxSelect" class="form-select form-select-sm" onchange="allUpdateTax(this)">
+            <option value="" selected disabled>-- 税率を選択 --</option>
+            <option value="default">適用なし (--)</option>
+            <option value="tax8">一括で 8% に変更</option>
+            <option value="tax10">一括で 10% に変更</option>
+        </select>
+    </div>
+</div>
+
+<div class="table-responsive mb-3">
+    <table class="table table-hover align-middle">
+        <thead class="table-light">
+            <tr>
+                <th scope="col" style="width: 10%;">削除</th>
+                <th scope="col" style="width: 45%;">品目</th>
+                <th scope="col" style="width: 25%;">価格</th>
+                <th scope="col" style="width: 20%;">税率</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td>
+                    <button type="button" class="btn btn-outline-danger btn-sm" data-index="{{ loop.index0 }}" onclick="deleteItem(this)">
+                        <i class="bi bi-dash-circle"></i>
+                    </button>
+                </td>
+                <td>
+                    <input type="text" class="form-control" data-index="{{ loop.index0 }}" value="{{ item.name }}" onblur="updateName(this)" placeholder="品目名を入力">
+                </td>
+                <td>
+                    <div class="input-group">
+                        <input type="number" class="form-control text-end font-monospace" data-index="{{ loop.index0 }}" value="{{ item.price }}" onblur="updatePrice(this)">
+                        <span class="input-group-text">円</span>
+                    </div>
+                </td>
+                <td>
+                    <select class="form-select" data-index="{{ loop.index0 }}" onchange="updateTax(this)">
+                        <option value="default" {% if item.tax_mode == "default" %}selected{% endif %}>--</option>
+                        <option value="tax8" {% if item.tax_mode == "tax8" %}selected{% endif %}>+8%</option>
+                        <option value="tax10" {% if item.tax_mode == "tax10" %}selected{% endif %}>+10%</option>
+                    </select>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="mb-4 text-center">
+    <button type="button" class="btn btn-outline-primary btn-sm px-3" onclick="addItem()">
+        <i class="bi bi-plus-circle me-1"></i> 品目を追加
+    </button>
+</div>
+
+<div class="bg-light p-3 rounded mb-4">
+    <div class="row align-items-center mb-2">
+        <div class="col-6 col-sm-7 text-secondary">
+            {{ discount.name }}
+        </div>
+        <div class="col-6 col-sm-5 d-flex justify-content-end">
+            <div class="input-group input-group-sm" style="max-width: 140px;">
+                <input type="number" class="form-control text-end font-monospace text-danger" id="discountPrice" value="{{ discount.price }}" onblur="updateDiscount()">
+                <span class="input-group-text text-danger">円</span>
+            </div>
+        </div>
+    </div>
+    
+    {% for i in tax %}
+    <div class="d-flex justify-content-between mb-0 border-top pt-2 mt-2">
+        <span class="text-secondary small">{{ i.name }}</span>
+        <span class="text-dark font-monospace small">{{ i.price }}円</span>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="d-flex justify-content-between align-items-center border-top border-dark border-2 pt-3 mb-2">
+    <span class="h5 mb-0 fw-bold">{{ total.name }}</span>
+    <span class="h3 mb-0 fw-bold text-primary font-monospace">{{ total.price }}円</span>
+</div>

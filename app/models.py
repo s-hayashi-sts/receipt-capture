@@ -1,9 +1,8 @@
 from datetime import datetime
 
-from flask_login import UserMixin, login_required, login_user, logout_user
-from sqlalchemy import DateTime, ForeignKey, Integer, String, func
+from flask_login import UserMixin
+from sqlalchemy import DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from werkzeug.security import check_password_hash, generate_password_hash
 
 from apps.app.main import app, db, login_manager
 
@@ -19,7 +18,7 @@ class User(UserMixin, db.Model):
     receipts: Mapped[list["Receipt"]] = relationship(back_populates="user")
 
 
-@login_manager.user_loader  # 書くだけでいい
+@login_manager.user_loader
 def load_user(user_id):
     return db.session.get(User, int(user_id))
 
@@ -31,13 +30,11 @@ class Receipt(db.Model):
 
     # レシート全体の金額情報
     total_price: Mapped[int] = mapped_column(Integer, nullable=False)  # 合計金額
-    tax: Mapped[int] = mapped_column(Integer, default=0)  # 税額
+    tax: Mapped[int] = mapped_column(Integer, default=0)  # 税額（税別の場合）
     discount: Mapped[int] = mapped_column(Integer, default=0)  # 割引額
 
     # 買い物した日時（レシート単位で管理）
-    date: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.now().strftime("%Y-%m-%d %H:%M")
-    )
+    date: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
 
     # リレーション設定
     user: Mapped["User"] = relationship(back_populates="receipts")
@@ -58,5 +55,15 @@ class Expense(db.Model):
     receipt: Mapped["Receipt"] = relationship(back_populates="expenses")
 
 
-with app.app_context():
-    db.create_all()
+class ApiUsage(db.Model):
+    __tablename__ = "api_usage"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    # "2026-07" のような年月文字列で管理する
+    year_month: Mapped[str] = mapped_column(String(7), unique=True, nullable=False)
+    count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
+
+"""開発中のみ使用"""
+# with app.app_context():
+#    db.create_all()

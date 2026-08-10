@@ -1,5 +1,3 @@
-// static/js/report.js
-
 // グローバルで現在の表示年月と選択日を管理（デフォルトは今日）
 let currentYear = new Date().getFullYear();
 let currentMonth = new Date().getMonth() + 1; // 1~12
@@ -8,6 +6,7 @@ let currentMonth = new Date().getMonth() + 1; // 1~12
 let minYear = currentYear;
 let minMonth = currentMonth;
 
+// 現在年月
 const today = new Date();
 const y = today.getFullYear();
 const m = String(today.getMonth() + 1).padStart(2, '0');
@@ -41,6 +40,7 @@ async function fetchDateRange() {
         minMonth = data.earliest_month;
     } catch (e) {
         console.error("date-range取得に失敗:", e);
+        alert("通信エラーが発生しました。ネットワーク接続を確認するか、ページを更新してください。");
     }
 }
 
@@ -57,7 +57,7 @@ function updateNavButtons(year, month) {
     document.getElementById("prev-month").disabled = isEarliestOrBefore;
 }
 
-// 月移動時：⑨ その月の1日の内訳を表示する
+// 月移動時：⑨ その月の一日の内訳を表示する
 function goToMonth(year, month) {
     // 範囲外への移動を念のため防止（ボタンdisabled済みだが二重ガード）
     const now = new Date();
@@ -79,49 +79,53 @@ async function renderCalendar(year, month) {
 
     const cellsContainer = document.getElementById("calendar-cells");
     cellsContainer.innerHTML = "";
+    try{
+        const response = await fetch(`/api/monthly-summary?year=${year}&month=${month}`);
+        const dailyTotals = await response.json();
 
-    const response = await fetch(`/api/monthly-summary?year=${year}&month=${month}`);
-    const dailyTotals = await response.json();
+        // ⑩ 月合計を計算して表示
+        const monthlyTotal = Object.values(dailyTotals).reduce((sum, v) => sum + v, 0);
+        document.getElementById("monthly-total").textContent = `¥${monthlyTotal.toLocaleString()}`;
 
-    // ⑩ 月合計を計算して表示
-    const monthlyTotal = Object.values(dailyTotals).reduce((sum, v) => sum + v, 0);
-    document.getElementById("monthly-total").textContent = `¥${monthlyTotal.toLocaleString()}`;
+        // 月の初日の曜日（0=日〜6=土）と、総日数を計算
+        const firstDayIndex = new Date(year, month - 1, 1).getDay();
+        const totalDays = new Date(year, month, 0).getDate();
 
-    // 月の初日の曜日（0=日〜6=土）と、総日数を計算
-    const firstDayIndex = new Date(year, month - 1, 1).getDay();
-    const totalDays = new Date(year, month, 0).getDate();
+        // 空白マスの挿入（前月分の余白）
+        for (let i = 0; i < firstDayIndex; i++) {
+            const emptyCell = document.createElement("div");
+            emptyCell.style.visibility = "hidden";
+            cellsContainer.appendChild(emptyCell);
+        }
 
-    // 空白マスの挿入（前月分の余白）
-    for (let i = 0; i < firstDayIndex; i++) {
-        const emptyCell = document.createElement("div");
-        emptyCell.style.visibility = "hidden";
-        cellsContainer.appendChild(emptyCell);
-    }
+        // 日付マスの生成
+        for (let day = 1; day <= totalDays; day++) {
+            const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            const total = dailyTotals[dateStr] || 0;
 
-    // 日付マスの生成
-    for (let day = 1; day <= totalDays; day++) {
-        const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-        const total = dailyTotals[dateStr] || 0;
+            const activeClass = (dateStr === selectedDateStr) ? 'border border-primary border-3 fw-bold' : '';
+            const priceDisplay = total > 0
+                ? `<span class="badge bg-primary text-white" style="font-size: 0.65rem;">¥${total.toLocaleString()}</span>`
+                : '<span class="badge" style="font-size: 0.65rem; visibility: hidden;">¥0</span>';
 
-        const activeClass = (dateStr === selectedDateStr) ? 'border border-primary border-3 fw-bold' : '';
-        const priceDisplay = total > 0
-            ? `<span class="badge bg-primary text-white" style="font-size: 0.65rem;">¥${total.toLocaleString()}</span>`
-            : '<span class="badge" style="font-size: 0.65rem; visibility: hidden;">¥0</span>';
+            const cell = document.createElement("div");
+            cell.className = `text-center p-2 calendar-day-cell ${activeClass}`;
+            cell.style.cursor = "pointer";
+            cell.dataset.date = dateStr;
 
-        const cell = document.createElement("div");
-        cell.className = `text-center p-2 calendar-day-cell ${activeClass}`;
-        cell.style.cursor = "pointer";
-        cell.dataset.date = dateStr;
+            cell.innerHTML = `
+                <div>${day}</div>
+                ${priceDisplay}
+            `;
 
-        cell.innerHTML = `
-            <div>${day}</div>
-            ${priceDisplay}
-        `;
-
-        cell.addEventListener("click", () => {
-            onDateSelect(dateStr);
-        });
-        cellsContainer.appendChild(cell);
+            cell.addEventListener("click", () => {
+                onDateSelect(dateStr);
+            });
+            cellsContainer.appendChild(cell);
+        }
+    } catch (e) {
+        console.error("renderCalendarエラー:", e);
+        alert("通信エラーが発生しました。ネットワーク接続を確認するか、ページを更新してください。");
     }
 }
 
@@ -134,27 +138,39 @@ function onDateSelect(dateStr) {
 
 // 内訳データを取得して画面下部に反映する関数
 async function loadDailyDetail(dateStr) {
-    const response = await fetch(`/api/daily-detail?date=${dateStr}`);
-    const data = await response.json();
+    try{
+        const response = await fetch(`/api/daily-detail?date=${dateStr}`);
+        const data = await response.json();
 
-    const displayDate = dateStr.replace(/-/g, '/');
-    document.getElementById("selected-date").textContent = displayDate;
-    document.getElementById("selected-total").textContent = `¥${data.total_price.toLocaleString()}`;
+        const displayDate = dateStr.replace(/-/g, '/');
+        document.getElementById("selected-date").textContent = displayDate;
+        document.getElementById("selected-total").textContent = `¥${data.total_price.toLocaleString()}`;
+        document.getElementById("selected-tax").textContent = `¥${data.total_tax.toLocaleString()}`;
 
-    const listContainer = document.getElementById("expense-list");
-    listContainer.innerHTML = "";
+        const listContainer = document.getElementById("expense-list");
+        listContainer.innerHTML = "";
 
-    if (data.items.length === 0) {
-        listContainer.innerHTML = `<li class="list-group-item text-muted text-center">この日の出費はありません</li>`;
-        return;
-    }
-    data.items.forEach(item => {
-        const li = document.createElement("li");
-        li.className = "list-group-item d-flex justify-content-between align-items-center px-0";
-        li.innerHTML = `
-            <span>・ ${item.item}</span>
-            <span class="fw-bold">¥${item.price.toLocaleString()}</span>
-        `;
-        listContainer.appendChild(li);
-    });
+        if (data.items.length === 0) {
+            listContainer.innerHTML = `<li class="list-group-item text-muted text-center">この日の出費はありません</li>`;
+            return;
+        }
+        data.items.forEach(item => {
+            const li = document.createElement("li");
+            li.className = "list-group-item d-flex justify-content-between align-items-center px-0";
+
+            const isDiscount = item.item === "割引";
+            const priceFormatted = isDiscount
+                ? `-¥${Math.abs(item.price).toLocaleString()}`
+                : `¥${item.price.toLocaleString()}`;
+
+            li.innerHTML = `
+                <span>${item.item}</span>
+                <span>${priceFormatted}</span>
+            `;
+            listContainer.appendChild(li);
+        });
+    } catch (e) {
+            console.error("loadDailyDetailエラー:", e);
+            alert("通信エラーが発生しました。ネットワーク接続を確認するか、ページを更新してください。");
+        }
 }

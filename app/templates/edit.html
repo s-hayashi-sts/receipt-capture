@@ -6,14 +6,14 @@
             
             <div class="card shadow-sm">
                 <div class="card-header bg-dark text-white text-center py-3">
-                    <h5 class="card-title mb-0">読み取り結果の編集</h5>
+                    <h5 class="card-title mb-0">登録内容の編集</h5>
                 </div>
                 
                 <div class="card-body p-4">
                     <meta name="csrf-token" content="{{ csrf_token() }}">
 
                     <form action="/edit" method="POST" id="editFormSubmit">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="csrf_token" id="csrf_token_input" value="">
 
                         {% if error %}
                         <div class="alert alert-danger mt-3" role="alert">

@@ -1,21 +1,20 @@
-// グローバル変数で税計算方式を保持
-let tax_calc_mode = "all";
-
 // ページロード時の初期設定
 document.addEventListener("DOMContentLoaded", () => {
-    // 税計算方式のチェック状態を反映
-    const checkedRadio = document.querySelector('input[name="tax_calc_mode"]:checked');
-    if (checkedRadio) {
-        tax_calc_mode = checkedRadio.value;
+
+    // metaタグからCSRFトークンを取得し、フォームのhidden inputに同じ値をセット
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    const csrfInput = document.getElementById("csrf_token_input");
+    if (csrfInput) {
+        csrfInput.value = csrfToken;
     }
 
-    // ① datetime-local の初期値をセット (YYYY-MM-DD HH:mm -> YYYY-MM-DDTHH:mm)
+    // datetime-local の初期値をセット (YYYY-MM-DD HH:mm -> YYYY-MM-DDTHH:mm)
     const dtInput = document.getElementById("registerDatetime");
     if (dtInput) {
         const now = new Date();
         const year = now.getFullYear(); // 現在の年を取得
 
-        // 1. 最小値（現在の時刻から1年前を計算）
+        // 最小値（現在の時刻から1年前を計算）
         const oneYearAgo = new Date();
         oneYearAgo.setFullYear(now.getFullYear() - 1); // 1年前の年に設定
 
@@ -26,25 +25,25 @@ document.addEventListener("DOMContentLoaded", () => {
         // YYYY-MM-DDTHH:mm 形式でセット
         const minDateTime = `${minYear}-${minMonth}-${minDate}T00:00`;
 
-        // 2. 最大値（現在時刻）を YYYY-MM-DDTHH:mm 形式で作る
+        // 最大値（現在時刻）を YYYY-MM-DDTHH:mm 形式で作る
         const month = String(now.getMonth() + 1).padStart(2, '0');
         const date = String(now.getDate()).padStart(2, '0');
         const hours = String(now.getHours()).padStart(2, '0');
         const minutes = String(now.getMinutes()).padStart(2, '0');
         const maxDateTime = `${year}-${month}-${date}T${hours}:${minutes}`;
 
-        // 3. input要素に制限をセット
+        // input要素に制限をセット
         dtInput.min = minDateTime;
         dtInput.max = maxDateTime;
 
-        const rawVal = dtInput.dataset.rawValue; // "2026-04-24 18:52"
+        const rawVal = dtInput.dataset.rawValue; //例 "2026-04-24 18:52"
         if (rawVal) {
             dtInput.value = rawVal.replace(" ", "T");
         }
     }
 });
 
-// 重複コードを削減するための共通 fetch 送信関数（② CSRFトークン付き）
+// 重複コードを削減するための共通 fetch 送信関数（ CSRFトークン付き）
 function sendPostRequest(payload) {
     const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
@@ -65,10 +64,20 @@ function sendPostRequest(payload) {
         // 返却されたテーブル内のHTMLデータを差し替え
         document.getElementById("editForm").innerHTML = data.html;
     })
-    .catch(err => console.error("Error updating form:", err));
+    .catch(err => {
+        console.error("Error updating form:", err);
+        alert("通信エラーが発生しました。ネットワーク接続を確認するか、ページを更新してください。");
+    });
+}    
+
+// 税率の計算方法を取得
+function getTaxCalcMode() {
+    const checked = document.querySelector('input[name="tax_calc_mode"]:checked');
+    return checked ? checked.value : "all";
 }
 
-// ① 日時情報の同期
+
+// 日時情報の同期
 function updateDatetime(input) {
     const errorDiv = document.getElementById("datetimeError");
     const errorText = document.getElementById("datetimeErrorText");
@@ -76,7 +85,7 @@ function updateDatetime(input) {
     // 1. 入力が空、またはブラウザの標準チェックで不正な形式の場合
     if (!input.value || !input.checkValidity()) {
         
-        // 今年の1月1日より前（min未満）の場合
+        // 1年以上前（min未満）の場合
         if (input.validity.rangeUnderflow) {
             errorText.textContent = "1年以上前の日付は選択できません";
         } 
@@ -106,7 +115,7 @@ function updateDatetime(input) {
     sendPostRequest({
         action: "update_datetime",
         datetime: formattedDatetime,
-        tax_calc_mode: tax_calc_mode
+        tax_calc_mode: getTaxCalcMode()
     });
 }
 
@@ -115,37 +124,53 @@ function changeTaxMode() {
     tax_calc_mode = document.querySelector('input[name="tax_calc_mode"]:checked').value;
     sendPostRequest({
         action: "change_calc_mode",
-        tax_calc_mode: tax_calc_mode
+        tax_calc_mode: getTaxCalcMode()
     });
+}
+
+// 入力要素が現在の DOM 上に正しく存在しているか検証するヘルパー関数
+function isValidElement(element) {
+    if (!element) return false;
+    // document.body 内に含まれているか（＝すでに破棄された古い DOM でないか）を判定
+    return document.body.contains(element);
 }
 
 // 品目入力時
 function updateName(input) {
+    // 送信前に要素が最新の DOM に存在するかチェック
+    if (!isValidElement(input)) return;
+
     sendPostRequest({
         action: "update_name",
         index: parseInt(input.dataset.index),
         name: input.value, 
-        tax_calc_mode: tax_calc_mode
+        tax_calc_mode: getTaxCalcMode()
     });
 }
 
 // 金額入力時
 function updatePrice(input) {
+    // 送信前に要素が最新の DOM に存在するかチェック
+    if (!isValidElement(input)) return;
+
     sendPostRequest({
         action: "update_price",
         index: parseInt(input.dataset.index),
         price: parseInt(input.value) || 0, 
-        tax_calc_mode: tax_calc_mode
+        tax_calc_mode: getTaxCalcMode()
     });
 }
 
 // 税率の変更
 function updateTax(selectElement) {
+    // 送信前に要素が最新の DOM に存在するかチェック
+    if (!isValidElement(selectElement)) return;
+
     sendPostRequest({
         action: "update_tax",
         index: parseInt(selectElement.dataset.index),
         tax_mode: selectElement.value, 
-        tax_calc_mode: tax_calc_mode
+        tax_calc_mode: getTaxCalcMode()
     });
 }
 
@@ -155,16 +180,19 @@ function updateDiscount() {
     sendPostRequest({
         action: "update_discount",
         price: discountPrice, 
-        tax_calc_mode: tax_calc_mode
+        tax_calc_mode: getTaxCalcMode()
     });
 }
 
 // 行の削除
 function deleteItem(button) {
+    // 送信前に要素が最新の DOM に存在するかチェック
+    if (!isValidElement(button)) return;
+
     sendPostRequest({
         action: "delete",
         index: parseInt(button.dataset.index), 
-        tax_calc_mode: tax_calc_mode
+        tax_calc_mode: getTaxCalcMode()
     });
 }
 
@@ -172,7 +200,7 @@ function deleteItem(button) {
 function addItem() {
     sendPostRequest({
         action: "add", 
-        tax_calc_mode: tax_calc_mode
+        tax_calc_mode: getTaxCalcMode()
     });
 }
 
@@ -185,7 +213,7 @@ function allUpdateTax(selectElement) {
         sendPostRequest({
             action: "all_update_tax",
             tax_mode: tax_mode,
-            tax_calc_mode: tax_calc_mode
+            tax_calc_mode: getTaxCalcMode()
         });
     } else {
         // キャンセルされた場合はセレクトボックスの表示をリセット
@@ -195,24 +223,24 @@ function allUpdateTax(selectElement) {
 
 // キャンセルボタン用の関数
 function cancelEditForm() {
-    // 1. 確認ポップアップを表示
+    // 確認ポップアップを表示
     if (!confirm('編集内容を破棄しますか？')) {
         return; // キャンセルされたら何もしない
     }
 
     const form = document.getElementById("editFormSubmit");
 
-    // 2. Flask側が「action == 'cancel'」を判定できるように、hidden inputを生成して追加
+    // Flask側が「action == 'cancel'」を判定できるように、hidden inputを生成して追加
     const hiddenInput = document.createElement("input");
     hiddenInput.type = "hidden";
     hiddenInput.name = "action";
-    hiddenInput.value = "cancel"; //  ここが Flask の if action == "cancel": にヒットします
+    hiddenInput.value = "cancel";
     form.appendChild(hiddenInput);
 
-    // 3. 日付未入力などのHTML5バリデーションによる送信ブロックを強制解除
+    // 日付未入力などのHTML5バリデーションによる送信ブロックを強制解除
     form.noValidate = true;
 
-    // 4. フォームを送信（FlaskへPOSTされ、セッション初期化後に /confirmation へ遷移）
+    // フォームを送信（FlaskへPOSTされ、セッション初期化後に /confirmation へ遷移）
     form.submit();
 }
 
@@ -232,7 +260,7 @@ function submitEditForm() {
     const hiddenInput = document.createElement("input");
     hiddenInput.type = "hidden";
     hiddenInput.name = "action";
-    hiddenInput.value = "confirm"; //  ここが Flask の if action == "confirm": にヒットします
+    hiddenInput.value = "confirm";
     form.appendChild(hiddenInput);
 
     form.submit();

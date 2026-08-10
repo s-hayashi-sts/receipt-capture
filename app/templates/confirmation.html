@@ -6,10 +6,15 @@
             
             <div class="card shadow-sm">
                 <div class="card-header bg-dark text-white text-center py-3">
-                    <h5 class="card-title mb-0">読み取り結果の確認</h5>
+                    <h5 class="card-title mb-0">登録内容の確認</h5>
                 </div>
                 
                 <div class="card-body p-4">
+                    {% if error %}
+                    <div class="alert alert-danger mt-3" role="alert">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i> {{ error }}
+                    </div>
+                    {% endif %}
                     <div class="mb-4 text-secondary border-bottom pb-2 d-flex justify-content-between align-items-center">
                         <span class="text-dark"><i class="bi bi-calendar-check"></i> {{ register_datetime.name }}</span>
                         <strong class="text-dark">{{ register_datetime.datetime }}</strong>
@@ -65,7 +70,7 @@
                         <div class="row g-2">
                             <div class="col-6">
                                 <button type="submit" name="action" value="cancel" class="btn btn-outline-danger w-100"
-                                        onclick="return confirm('読み取り内容を破棄して戻りますか？');">
+                                        onclick="return confirm('登録内容を破棄して戻りますか？');">
                                     <i class="bi bi-trash me-1"></i>破棄して戻る
                                 </button>
                             </div>

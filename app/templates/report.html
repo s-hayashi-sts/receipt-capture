@@ -35,7 +35,7 @@
     <div class="d-flex justify-content-between align-items-center bg-light-subtle text-dark p-3 rounded-top border">
         <button id="prev-month" class="btn btn-primary">&larr;</button>
         <div class="text-center">
-            <h6 id="calendar-title" class="m-0 text-50">2026年6月</h6>
+            <h6 id="calendar-title" class="m-0 text-dark">2026年6月</h6>
             <div class="d-flex align-items-center justify-content-center gap-2">
                 <span class="badge bg-primary text-white">合計支出</span>
                 <span class="fs-3 fw-bold text-dark" id="monthly-total">¥0</span>
@@ -57,9 +57,14 @@
     <div class="bg-white p-4 border rounded-bottom shadow-sm">
         <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
             <h5 id="selected-date" class="m-0">2026/6/1</h5>
-            <div class="d-flex align-items-center justify-content-center gap-2">
-                <span class="m-0 text-dark fw-bold">合計</span>
-                <h5 class="m-0 fw-bold"><span id="selected-total">¥0</span></h5>
+            <div class="text-end">
+                <div class="d-flex align-items-center justify-content-center gap-2">
+                    <span class="m-0 text-dark fw-bold">合計</span>
+                    <h5 class="m-0 fw-bold"><span id="selected-total">¥0</span></h5>
+                </div>
+                <div class="text-muted small">
+                    （内消費税：<span id="selected-tax">¥0</span>）
+                </div>
             </div>
         </div>
         <ul id="expense-list" class="list-group list-group-flush">

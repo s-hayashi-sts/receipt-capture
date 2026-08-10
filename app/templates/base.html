@@ -22,7 +22,7 @@
             <div class="navbar-text ms-auto">
                 {% if current_user.is_authenticated %}
                     <span class="me-3 text-white small d-none d-sm-inline">{{ current_user.mailaddress }} でログイン中</span>
-                    <a class="btn btn-outline-light btn-sm" href="{{ url_for('logout') }}">ログアウト</a>
+                    <a class="btn btn-primary btn-sm" href="{{ url_for('logout') }}">ログアウト</a>
                 {% endif %}
             </div>
             

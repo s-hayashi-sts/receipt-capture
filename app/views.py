@@ -12,11 +12,11 @@ from flask_login import (
 from sqlalchemy import String, cast, func
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from apps.app.api_limiter import check_api_usage
-from apps.app.forms import LoginForm, SignUpForm, UploadImageForm
-from apps.app.main import app, db
-from apps.app.models import Expense, Receipt, User
-from apps.app.receiptreader import ReceiptReader, ReceiptValidationError
+from app.api_limiter import check_api_usage
+from app.forms import LoginForm, SignUpForm, UploadImageForm
+from app.main import app, db
+from app.models import Expense, Receipt, User
+from app.receiptreader import ReceiptReader, ReceiptValidationError
 
 
 @app.route("/", methods=["GET", "POST"])

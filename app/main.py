@@ -9,7 +9,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_wtf.csrf import CSRFError, CSRFProtect
 from sqlalchemy.orm import DeclarativeBase
 
-from apps.app.config import config_by_name
+from app.config import config_by_name
 
 app = Flask(__name__)
 

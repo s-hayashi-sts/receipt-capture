@@ -1,1 +1,1 @@
-from apps.app import main, models, views
+from app import main, models, views

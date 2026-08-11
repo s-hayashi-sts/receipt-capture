@@ -3,8 +3,8 @@ from datetime import datetime
 
 from sqlalchemy.exc import OperationalError
 
-from apps.app.main import db
-from apps.app.models import ApiUsage
+from app.main import db
+from app.models import ApiUsage
 
 # Google Cloud Vision APIの無料枠(月間)。
 MONTHLY_LIMIT = 1000

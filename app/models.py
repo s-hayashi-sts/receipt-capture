@@ -4,7 +4,7 @@ from flask_login import UserMixin
 from sqlalchemy import DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from apps.app.main import app, db, login_manager
+from app.main import app, db, login_manager
 
 
 class User(UserMixin, db.Model):

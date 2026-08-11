@@ -34,6 +34,7 @@ class ProductionConfig(Config):
     # 本番環境用
     DEBUG = False
     SQLALCHEMY_ECHO = False
+    # Renderの環境変数 DATABASE_URL を取得（なければローカル用SQLite）
     SESSION_COOKIE_SECURE = True  # HTTPS通信でのみCookieを送信
     SESSION_COOKIE_HTTPONLY = True  # JavaScriptからCookieを読めないようにする
 

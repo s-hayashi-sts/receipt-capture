@@ -1,5 +1,6 @@
 import logging
 import os
+import tempfile
 
 from flask import Flask, render_template
 from flask_debugtoolbar import DebugToolbarExtension
@@ -10,6 +11,20 @@ from flask_wtf.csrf import CSRFError, CSRFProtect
 from sqlalchemy.orm import DeclarativeBase
 
 from app.config import config_by_name
+
+# Renderの環境変数からGoogle認証JSON文字列を取得
+google_credentials_json = os.environ.get("GOOGLE_CREDENTIALS_JSON", "")
+
+if google_credentials_json:
+    # 一時ファイルを作成してJSONの中身を書き込む
+    temp_credentials_file = tempfile.NamedTemporaryFile(
+        delete=False, mode="w", suffix=".json"
+    )
+    temp_credentials_file.write(google_credentials_json)
+    temp_credentials_file.close()
+
+    # GCPクライアントライブラリが参照する環境変数をセット
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = temp_credentials_file.name
 
 app = Flask(__name__)
 

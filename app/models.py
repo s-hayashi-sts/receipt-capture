@@ -4,7 +4,7 @@ from flask_login import UserMixin
 from sqlalchemy import DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.main import app, db, login_manager
+from app.main import db, login_manager
 
 
 class User(UserMixin, db.Model):
@@ -62,8 +62,3 @@ class ApiUsage(db.Model):
     # "2026-07" のような年月文字列で管理する
     year_month: Mapped[str] = mapped_column(String(7), unique=True, nullable=False)
     count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-
-
-"""開発中のみ使用"""
-# with app.app_context():
-#    db.create_all()

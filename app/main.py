@@ -63,6 +63,11 @@ db.init_app(app)
 
 Migrate(app, db)
 
+"""開発中のみ使用"""
+if env_name == "development":
+    with app.app_context():
+        db.create_all()
+
 login_manager = LoginManager()
 login_manager.login_view = "login"
 login_manager.login_message = ""

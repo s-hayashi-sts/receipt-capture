@@ -4,6 +4,8 @@ import re
 from datetime import datetime
 
 import cv2
+import gc
+
 
 # import easyocr
 import numpy as np
@@ -67,6 +69,10 @@ class ReceiptReader:
         """文字検出→検出範囲に対して最小外接矩形を描画し、画像の傾きを補正する"""
         ocr = ONNXPaddleOcr(use_gpu=False, lang="japan", drop_score=0.4)
         result = ocr.ocr(resized_img, rec=False)
+
+        # 処理完了後、メモリを明示的に解放する
+        del ocr
+        gc.collect()
 
         h, w = resized_img.shape[:2]
 

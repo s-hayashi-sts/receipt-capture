@@ -58,7 +58,7 @@ def signup():
             user = User(
                 mailaddress=form.mailaddress.data,
                 password=generate_password_hash(
-                    form.password.data, method="pbkdf2:sha256"
+                    form.password.data
                 ),
             )
 

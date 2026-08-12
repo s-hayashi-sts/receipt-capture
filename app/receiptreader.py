@@ -2,6 +2,7 @@ import copy
 import math
 import re
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 import cv2
 import gc
@@ -279,7 +280,7 @@ class ReceiptReader:
         # 商品の購入日（デフォルトは現在の日時）
         register_datetime = {
             "name": "登録日時",
-            "datetime": datetime.now().strftime("%Y-%m-%d %H:%M"),
+            "datetime": datetime.now(ZoneInfo("Asia/Tokyo")).strftime("%Y-%m-%d %H:%M"),
         }
         # 日付判定済みかをチェックするフラグ
         datetime_flag = False

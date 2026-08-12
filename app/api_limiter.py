@@ -1,5 +1,6 @@
 import time
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from sqlalchemy.exc import OperationalError
 
@@ -16,7 +17,7 @@ MONTHLY_LIMIT = 1000
 
 
 def check_api_usage(max_retries=3, delay=0.2):
-    year_month = datetime.now().strftime("%Y-%m")
+    year_month = datetime.now(ZoneInfo("Asia/Tokyo")).strftime("%Y-%m")
     """
     SQLite等で行ロック（with_for_update）未対応またはDBロック競合が発生した場合、
     OperationalErrorをキャッチしてリトライを行う

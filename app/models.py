@@ -1,4 +1,5 @@
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from flask_login import UserMixin
 from sqlalchemy import DateTime, ForeignKey, Integer, String
@@ -34,7 +35,7 @@ class Receipt(db.Model):
     discount: Mapped[int] = mapped_column(Integer, default=0)  # 割引額
 
     # 買い物した日時（レシート単位で管理）
-    date: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+    date: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(ZoneInfo("Asia/Tokyo")))
 
     # リレーション設定
     user: Mapped["User"] = relationship(back_populates="receipts")

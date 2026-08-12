@@ -1,6 +1,7 @@
 import copy
 import math
 from datetime import date, datetime
+from zoneinfo import ZoneInfo
 
 from flask import flash, jsonify, redirect, render_template, request, session
 from flask_login import (
@@ -159,8 +160,8 @@ def get_monthly_summary():
     if not session.get("from_report", False):
         return redirect("/report")
 
-    year = int(request.args.get("year", datetime.now().year))
-    month = int(request.args.get("month", datetime.now().month))
+    year = int(request.args.get("year", datetime.now(ZoneInfo("Asia/Tokyo")).year))
+    month = int(request.args.get("month", datetime.now(ZoneInfo("Asia/Tokyo")).month))
 
     # 指定年月の1日〜末日までのReceiptをクエリ
     # ユーザーごとに絞り込むため、current_user.id を使用
@@ -265,7 +266,7 @@ def get_date_range():
         .filter(Receipt.user_id == current_user.id)
         .scalar()
     )
-    now = datetime.now()
+    now = datetime.now(ZoneInfo("Asia/Tokyo"))
     if earliest is None:
         # データが1件もない場合は当月を最古扱いにする
         return jsonify({"earliest_year": now.year, "earliest_month": now.month})
@@ -314,7 +315,7 @@ def edit():
     # セッション
     register_datetime = session.setdefault(
         "register_datetime",
-        {"name": "登録日時", "datetime": datetime.now().strftime("%Y-%m-%d %H:%M")},
+        {"name": "登録日時", "datetime": datetime.now(ZoneInfo("Asia/Tokyo")).strftime("%Y-%m-%d %H:%M")},
     )
     tax_calc_mode = session.setdefault("tax_calc_mode", "all")
     items = session.setdefault(
@@ -567,7 +568,7 @@ def confirmation():
                 db_date = date_val
             else:
                 # 万が一取得できなかった場合のフォールバック（現在日時）
-                db_date = datetime.now()
+                db_date = datetime.now(ZoneInfo("Asia/Tokyo"))
 
             # DBへ保存
             # Receipt 情報

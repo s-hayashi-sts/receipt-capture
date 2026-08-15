@@ -7,13 +7,17 @@ from zoneinfo import ZoneInfo
 import cv2
 import gc
 
-
-# import easyocr
 import numpy as np
 from flask import session
 from google.cloud import vision
 from onnxocr.onnx_paddleocr import ONNXPaddleOcr
 from PIL import Image, ImageEnhance
+
+"""
+アップロードされたレシート画像を読み取り、品目・価格・購入日時を抽出するクラス
+前処理でリサイズとコントラスト強化を行い、検出した文字を囲む最小外接矩形の長辺を垂直に揃えることで傾きを補正する
+後処理で正規表現を用いて購入日時・品目・価格を抽出する
+"""
 
 
 class ReceiptValidationError(Exception):
@@ -33,6 +37,10 @@ class ReceiptReader:
 
     # 前処理1 リサイズ
     def resize_image(self, raw_img, max_side=2000):
+        """
+        画像の長辺のサイズが閾値を超える場合、長辺を閾値に合わせてリサイズする。閾値以下の場合はリサイズせずにそのまま返す。
+        閾値を大きくするほど文字認識の精度は上がるが、処理時間が長くなる。
+        """
         h, w = raw_img.shape[:2]
         longest_side = max(h, w)
         if longest_side > max_side:
@@ -225,7 +233,11 @@ class ReceiptReader:
 
     # 文字列データの整形
     def reconstruct_lines(self, annotation):
-        """紙面の歪み対策 単語の上辺のy座標から同じ行かを判別"""
+        """
+        フロント側で表示する際に、商品名をキーとしてイテレーション処理を行うため、リスト形式で取得する必要があります。
+        商品と価格が組であることを判定するために、テキスト間のy座標の差を測定し、差が閾値より小さい場合は同じ行として判定し、
+        テキスト部分を商品名、数字部分を価格としてリストに追加します。
+        """
         words = []
 
         for page in annotation.pages:
@@ -259,7 +271,8 @@ class ReceiptReader:
             if current_y is None:
                 current_y = y
 
-            # y が近ければ同じ行 閾値は文字のサイズによって変えられるといい
+            # y が近ければ同じ行
+            """閾値は認識した文字のサイズによって変えられる設計が望ましいですが、工数の都合上、暫定の値を設定しています。"""
             if abs(y - current_y) < 15:
                 current_line.append((x, text))
             else:
@@ -377,7 +390,7 @@ class ReceiptReader:
         session["discount"] = {
             "name": "割引",
             "price": 0,
-        }  # この割引は入力フォームで合計金額を調整するためのもの
+        }  # この割引は入力フォームでユーザーが合計金額を調整するためのもの
         session["tax"] = [
             {"name": "外税 8%", "price": 0},
             {"name": "外税 10%", "price": 0},

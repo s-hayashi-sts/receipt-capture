@@ -1,4 +1,4 @@
-// グローバルで現在の表示年月と選択日を管理（デフォルトは今日）
+// グローバルでカレンダーの表示年月と選択日を管理（デフォルトは今日）
 let currentYear = new Date().getFullYear();
 let currentMonth = new Date().getMonth() + 1; // 1~12
 
@@ -44,7 +44,7 @@ async function fetchDateRange() {
     }
 }
 
-// 「今月より未来か」「最古月より前か」を判定してボタンの有効/無効を切り替える（⑤⑥）
+// 「今月より未来か」「最古月より前か」を判定して、登録データのない月へは遷移できないよう、ボタンの有効/無効を切り替える（⑤⑥）
 function updateNavButtons(year, month) {
     const now = new Date();
     const thisYear = now.getFullYear();

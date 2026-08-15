@@ -14,7 +14,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const now = new Date();
         const year = now.getFullYear(); // 現在の年を取得
 
-        // 最小値（現在の時刻から1年前を計算）
+        // 入力できる日付の最小値（現在の時刻から1年前）を計算
         const oneYearAgo = new Date();
         oneYearAgo.setFullYear(now.getFullYear() - 1); // 1年前の年に設定
 

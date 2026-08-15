@@ -12,6 +12,10 @@ from sqlalchemy.orm import DeclarativeBase
 
 from app.config import config_by_name
 
+"""
+VisionAPIを使用するための認証情報を環境変数から取得し、
+GCPクライアントライブラリが参照する環境変数にセットする処理
+"""
 # Renderの環境変数からGoogle認証JSON文字列を取得
 google_credentials_json = os.environ.get("GOOGLE_CREDENTIALS_JSON", "")
 
@@ -26,6 +30,8 @@ if google_credentials_json:
     # GCPクライアントライブラリが参照する環境変数をセット
     os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = temp_credentials_file.name
 
+
+"""Flaskアプリケーションのインスタンスを作成"""
 app = Flask(__name__)
 
 # 環境変数 FLASK_ENV の値（development / testing / production）に応じてconfigを切り替える

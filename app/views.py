@@ -22,6 +22,7 @@ from app.receiptreader import ReceiptReader, ReceiptValidationError
 
 @app.route("/", methods=["GET", "POST"])
 def login():
+    """ログイン画面"""
     # 既にログイン済みの場合は /upload へリダイレクト
     if current_user.is_authenticated:
         return redirect("/upload")
@@ -47,6 +48,7 @@ def login():
 
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
+    """サインアップ画面"""
     form = SignUpForm()
 
     if request.method == "POST":
@@ -84,6 +86,7 @@ def logout():
 @app.route("/upload", methods=["GET", "POST"])
 @login_required
 def upload():
+    """画像のアップロード画面"""
     # セッションをクリアする
     clear_edit_session()
     clear_base_session()
@@ -137,6 +140,7 @@ def upload():
 @app.route("/report", methods=["GET", "POST"])
 @login_required
 def report():
+    """支出確認画面"""
     # セッションをクリアする
     clear_edit_session()
     clear_base_session()
@@ -256,7 +260,7 @@ def get_daily_detail():
 @app.route("/api/date-range", methods=["GET"])
 @login_required
 def get_date_range():
-    """DBに登録されている、このユーザーの最も古いレシート日付の年月を返す"""
+    """DBに登録されている、このユーザーの最も古いレシート日付の年月を返すAPI"""
     # 不正な画面遷移の場合は/reportへ遷移
     if not session.get("from_report", False):
         return redirect("/report")
@@ -279,6 +283,8 @@ def get_date_range():
 
 
 def check_validation():
+    """セッションのデータのバリデーションをチェックする関数"""
+    # 日付（register_datetime）はフロント側でチェックしているのでここでは確認しない。
     items = session.get("receipt_items", [])
     discount = session.get("discount", {})
     total = session.get("total_amount", {})
@@ -308,6 +314,7 @@ def check_validation():
 @app.route("/edit", methods=["GET", "POST"])
 @login_required
 def edit():
+    """読み取り結果の編集画面"""
     # 正規ルートでの遷移かどうか確認（フラグがない場合アップロード画面へ飛ばす）
     if not session.get("to_edit", False):
         return redirect("/upload")
@@ -402,6 +409,7 @@ def edit():
 @app.route("/edit/update", methods=["POST"])
 @login_required
 def edit_update():
+    """編集画面（/edit）での操作を受け取り、セッションを更新して合計金額を再計算するAPI"""
     data = request.get_json()
     action = data.get("action")
     items = session.get("receipt_items", [])
@@ -511,6 +519,7 @@ def edit_update():
 @app.route("/confirmation", methods=["GET", "POST"])
 @login_required
 def confirmation():
+    """読み取り結果の確認画面"""
     # 正規ルートでの遷移かどうか確認（フラグがない場合アップロード画面へ飛ばす）
     if not session.get("to_confirmation", False):
         return redirect("/upload")
@@ -613,6 +622,7 @@ def confirmation():
 @app.route("/succeed", methods=["GET"])
 @login_required
 def succeed():
+    """DBへの登録完了時に表示する画面"""
     # 正規ルートでの遷移かどうか確認（フラグがない場合アップロード画面へ飛ばす）
     if not session.get("to_succeed", False):
         return redirect("/upload")

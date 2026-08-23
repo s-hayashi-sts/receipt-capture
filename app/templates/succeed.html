@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block top %}
+<div class="d-flex align-items-center gap-2 me-auto ms-3">
+    <a href="/upload" class="btn btn-primary btn-sm fw-bold px-3">
+        <i class="bi bi-plus-circle me-1"></i> 新規登録
+    </a>
+    <a href="/report" class="btn btn-primary btn-sm fw-bold px-3">
+        <i class="bi bi-journal-text me-1"></i> レポートを見る
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<meta name="csrf-token" content="{{ csrf_token() }}">
+<style>
+    .success-card {
+        border: none;
+        border-radius: 16px;
+    }
+    .success-icon {
+        font-size: 4.5rem;
+        color: #198754; /* Bootstrapのsuccessカラー（緑） */
+    }
+</style>
+
+<div class="row justify-content-center my-4">
+    <div class="col-md-6 col-lg-5 text-center">
+        
+        <!-- 完了カード -->
+        <div class="card success-card shadow p-4 p-sm-5">
+            <div class="card-body">
+                
+                <!-- チェックマークアイコン -->
+                <div class="mb-4">
+                    <i class="bi bi-check-circle-fill success-icon"></i>
+                </div>
+                
+                <!-- メッセージ -->
+                <h2 class="card-title h3 fw-bold text-dark mb-3">登録が完了しました！</h2>
+                <br>
+                <!-- ボタンエリア -->
+                <div class="d-grid gap-3">
+                    <!-- 続けて登録ボタン -->
+                    <a href="/upload" class="btn btn-success btn-lg shadow-sm py-2 fw-semibold">
+                        <i class="bi bi-plus-circle me-2"></i>続けて登録
+                    </a>
+                    
+                    <!-- レポートを見るボタン -->
+                    <a href="/report" class="btn btn-primary btn-lg py-2 fw-semibold">
+                        <i class="bi bi-journal-text me-2"></i>レポートを見る
+                    </a>
+                </div>
+                
+            </div>
+        </div>
+        
+    </div>
+</div>
+{% endblock %}

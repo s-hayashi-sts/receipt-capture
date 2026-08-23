@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            
+            <div class="card shadow-sm">
+                <div class="card-header bg-dark text-white text-center py-3">
+                    <h5 class="card-title mb-0">登録内容の確認</h5>
+                </div>
+                
+                <div class="card-body p-4">
+                    {% if error %}
+                    <div class="alert alert-danger mt-3" role="alert">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i> {{ error }}
+                    </div>
+                    {% endif %}
+                    <div class="mb-4 text-secondary border-bottom pb-2 d-flex justify-content-between align-items-center">
+                        <span class="text-dark"><i class="bi bi-calendar-check"></i> {{ register_datetime.name }}</span>
+                        <strong class="text-dark">{{ register_datetime.datetime }}</strong>
+                    </div>
+
+                    <div class="table-responsive mb-4">
+                        <table class="table table-hover align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th scope="col" style="width: 70%;">品目</th>
+                                    <th scope="col" class="text-end" style="width: 30%;">価格</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in items %}
+                                <tr>
+                                    <td>{{ item.name }}</td>
+                                    <td class="text-end font-monospace">{{ item.price }}円</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="bg-light p-3 rounded mb-4">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-dark">{{ discount.name }}</span>
+                            <span class="text-danger font-monospace">-{{ discount.price }}円</span>
+                        </div>
+                        
+                        {% for i in tax %}
+                        <div class="d-flex justify-content-between mb-2 border-top pt-2">
+                            <span class="text-dark">{{ i.name }}</span>
+                            <span class="text-dark font-monospace">{{ i.price }}円</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center border-top border-dark border-2 pt-3 mb-5">
+                        <span class="h4 mb-0 fw-bold">{{ total.name }}</span>
+                        <span class="h3 mb-0 fw-bold text-dark font-monospace">{{ total.price }}円</span>
+                    </div>
+
+                    <form action="/confirmation" method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                        <div class="d-grid mb-3">
+                            <button type="submit" name="action" value="register" class="btn btn-success btn-lg shadow-sm">
+                                <i class="bi bi-check-circle-fill me-2"></i>この内容で登録する
+                            </button>
+                        </div>
+
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <button type="submit" name="action" value="cancel" class="btn btn-outline-danger w-100"
+                                        onclick="return confirm('登録内容を破棄して戻りますか？');">
+                                    <i class="bi bi-trash me-1"></i>破棄して戻る
+                                </button>
+                            </div>
+                            <div class="col-6">
+                                <button type="submit" name="action" value="edit" class="btn btn-outline-primary w-100">
+                                    <i class="bi bi-pencil-square me-1"></i>編集
+                                </button>
+                            </div>
+
+                        </div>
+                    </form>
+                </div>
+            </div> 
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -3,7 +3,7 @@ import math
 from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
-from flask import flash, jsonify, redirect, render_template, request, session
+from flask import Blueprint, flash, jsonify, redirect, render_template, request, session
 from flask_login import (
     current_user,
     login_required,
@@ -15,12 +15,14 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 from app.api_limiter import check_api_usage
 from app.forms import LoginForm, SignUpForm, UploadImageForm
-from app.main import app, db
+from app.main import db
 from app.models import Expense, Receipt, User
 from app.receiptreader import ReceiptReader, ReceiptValidationError
 
+# 1. Blueprint の作成
+bp = Blueprint("main", __name__)
 
-@app.route("/", methods=["GET", "POST"])
+@bp.route("/", methods=["GET", "POST"])
 def login():
     """ログイン画面"""
     # 既にログイン済みの場合は /upload へリダイレクト
@@ -46,7 +48,7 @@ def login():
     return render_template("login.html", form=form)
 
 
-@app.route("/signup", methods=["GET", "POST"])
+@bp.route("/signup", methods=["GET", "POST"])
 def signup():
     """サインアップ画面"""
     form = SignUpForm()
@@ -75,7 +77,7 @@ def signup():
         return render_template("signup.html", form=form)
 
 
-@app.route("/logout")
+@bp.route("/logout")
 @login_required
 def logout():
     session.clear()
@@ -83,7 +85,7 @@ def logout():
     return redirect("/")
 
 
-@app.route("/upload", methods=["GET", "POST"])
+@bp.route("/upload", methods=["GET", "POST"])
 @login_required
 def upload():
     """画像のアップロード画面"""
@@ -101,15 +103,22 @@ def upload():
         try:
             receiptreader = ReceiptReader(file)
 
+            # API利用上限のチェック（前処理）:APIを2回呼び出す必要があるためbuffer=1で設定
+            success, error_msg = check_api_usage(buffer=1)
+            if not success:
+                flash(error_msg)
+                return render_template("upload.html", form=form)
+
             # 前処理
             image_bytes = receiptreader.deskew_and_adjustment()
-            # API利用上限のチェック
+
+            # API利用上限のチェック（本処理）
             success, error_msg = check_api_usage()
             if not success:
                 flash(error_msg)
                 return render_template("upload.html", form=form)
 
-            # Vision APIの実行
+            # 文字認識
             annotation = receiptreader.file_read(image_bytes)
             # 文字認識の信頼度スコアのチェック
             receiptreader.check_confidence(annotation)
@@ -137,7 +146,7 @@ def upload():
     return render_template("upload.html", form=form)
 
 
-@app.route("/report", methods=["GET", "POST"])
+@bp.route("/report", methods=["GET", "POST"])
 @login_required
 def report():
     """支出確認画面"""
@@ -156,7 +165,7 @@ def report():
         return render_template("report.html")
 
 
-@app.route("/api/monthly-summary", methods=["GET"])
+@bp.route("/api/monthly-summary", methods=["GET"])
 @login_required
 def get_monthly_summary():
     """指定された年月の『日ごとの合計金額』を返すAPI"""
@@ -202,7 +211,7 @@ def get_monthly_summary():
     return jsonify(summary_data)
 
 
-@app.route("/api/daily-detail", methods=["GET"])
+@bp.route("/api/daily-detail", methods=["GET"])
 @login_required
 def get_daily_detail():
     """選択された日付の『商品内訳リストとレシート合計』を返すAPI"""
@@ -257,7 +266,7 @@ def get_daily_detail():
     )
 
 
-@app.route("/api/date-range", methods=["GET"])
+@bp.route("/api/date-range", methods=["GET"])
 @login_required
 def get_date_range():
     """DBに登録されている、このユーザーの最も古いレシート日付の年月を返すAPI"""
@@ -311,7 +320,7 @@ def check_validation():
     return None
 
 
-@app.route("/edit", methods=["GET", "POST"])
+@bp.route("/edit", methods=["GET", "POST"])
 @login_required
 def edit():
     """読み取り結果の編集画面"""
@@ -406,7 +415,7 @@ def edit():
         )
 
 
-@app.route("/edit/update", methods=["POST"])
+@bp.route("/edit/update", methods=["POST"])
 @login_required
 def edit_update():
     """編集画面（/edit）での操作を受け取り、セッションを更新して合計金額を再計算するAPI"""
@@ -516,7 +525,7 @@ def edit_update():
     return jsonify({"html": html})
 
 
-@app.route("/confirmation", methods=["GET", "POST"])
+@bp.route("/confirmation", methods=["GET", "POST"])
 @login_required
 def confirmation():
     """読み取り結果の確認画面"""
@@ -619,7 +628,7 @@ def confirmation():
         )
 
 
-@app.route("/succeed", methods=["GET"])
+@bp.route("/succeed", methods=["GET"])
 @login_required
 def succeed():
     """DBへの登録完了時に表示する画面"""

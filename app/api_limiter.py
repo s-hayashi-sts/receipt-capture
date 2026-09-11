@@ -8,7 +8,8 @@ from app.main import db
 from app.models import ApiUsage
 
 # Google Cloud Vision APIの無料枠(月間)。
-MONTHLY_LIMIT = 1000
+# 無料枠の場合、月間最大1000回の呼び出しが可能(余裕をもたせて900回に設定)
+MONTHLY_LIMIT = 900
 
 """
 当月のVISION API呼び出し回数を確認し、上限未満であればカウントを1増やしてTrueを返す。
@@ -16,7 +17,7 @@ MONTHLY_LIMIT = 1000
 """
 
 
-def check_api_usage(max_retries=3, delay=0.2):
+def check_api_usage(max_retries=3, delay=0.2, buffer=0):
     year_month = datetime.now(ZoneInfo("Asia/Tokyo")).strftime("%Y-%m")
     """
     SQLite等で行ロック（with_for_update）未対応またはDBロック競合が発生した場合、
@@ -38,7 +39,7 @@ def check_api_usage(max_retries=3, delay=0.2):
                 db.session.flush()
 
             # 利用制限上限チェック
-            if usage.count >= MONTHLY_LIMIT:
+            if usage.count >= MONTHLY_LIMIT - buffer:
                 return False, "今月のAPI利用上限に達しました。"
 
             # カウントアップ

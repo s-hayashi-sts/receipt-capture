@@ -5,12 +5,10 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 import cv2
-import gc
 
 import numpy as np
 from flask import session
 from google.cloud import vision
-from onnxocr.onnx_paddleocr import ONNXPaddleOcr
 from PIL import Image, ImageEnhance
 
 """
@@ -49,7 +47,6 @@ class ReceiptReader:
                 raw_img, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_AREA
             )
             h, w = resized_img.shape[:2]
-            print("リサイズ確認：", "h:", h, "w:", w)
 
             return resized_img
         else:
@@ -70,77 +67,74 @@ class ReceiptReader:
 
     # OCR前処理
     def deskew_and_adjustment(self):
-        # コントラスト強化
+        # 1. 前処理: コントラスト強化
         modified_img = self.ajdust_image(raw_img=self.img)
-        # リサイズ
+        # 2. 前処理: リサイズ
         resized_img = self.resize_image(raw_img=modified_img)
 
-        """文字検出→検出範囲に対して最小外接矩形を描画し、画像の傾きを補正する"""
-        ocr = ONNXPaddleOcr(use_gpu=False, lang="japan", drop_score=0.4)
-        result = ocr.ocr(resized_img, rec=False)
+        # 画像を bytes 形式にエンコード（Vision APIに渡すため）
+        _, encoded_temp = cv2.imencode(".png", resized_img)
+        image_bytes_temp = encoded_temp.tobytes()
 
-        # 処理完了後、メモリを明示的に解放する
-        del ocr
-        gc.collect()
+        # Google Vision API の呼び出し（1回目）
+        client = vision.ImageAnnotatorClient()
+        image = vision.Image(content=image_bytes_temp)
+        response = client.document_text_detection(image=image)
+        annotation = response.full_text_annotation
 
-        h, w = resized_img.shape[:2]
+        angle = 0.0
 
-        # 黒背景のマスク画像を準備 (全要素が 0 = 黒)
-        mask = np.zeros((h, w), dtype=np.uint8)
+        # 検出結果から単語ごとのバウンディングボックスを取得し、最小外接矩形で傾きを算出
+        if annotation and annotation.pages:
+            box_points_list = []
 
-        for data in result:
-            for box in data:
-                # 検出された領域を白（255）で塗りつぶす
-                pts = np.array(box, dtype=np.int32)
-                cv2.fillPoly(mask, [pts], 255)
+            for page in annotation.pages:
+                for block in page.blocks:
+                    for paragraph in block.paragraphs:
+                        for word in paragraph.words:
+                            # 各単語の頂点座標を取得
+                            pts = [(v.x, v.y) for v in word.bounding_box.vertices]
+                            if len(pts) == 4:
+                                box_points_list.extend(pts)
 
-        # マスク画像から白ピクセル（文字領域）の座標を取得
-        coords = cv2.findNonZero(mask)
+            # 文字の頂点が存在する場合のみ傾き計算を行う
+            if box_points_list:
+                coords = np.array(box_points_list, dtype=np.int32)
+                rect = cv2.minAreaRect(coords)
+                box = cv2.boxPoints(rect)
+                box = np.int32(box)
 
-        # 文字ピクセルが存在する場合のみ傾き計算
-        if coords is not None:
-            # 文字ピクセルを囲む最小の長方形を求める
-            rect = cv2.minAreaRect(coords)
+                # 4辺の長さを計算
+                edges = []
+                for i in range(4):
+                    p1 = box[i]
+                    p2 = box[(i + 1) % 4]
 
-            # 最小外接矩形の4頂点
-            box = cv2.boxPoints(rect)
-            box = np.int32(box)
+                    dx = p2[0] - p1[0]
+                    dy = p2[1] - p1[1]
 
-            # 4辺の長さを求める
-            edges = []
+                    length = math.hypot(dx, dy)
+                    edges.append((length, dx, dy))
 
-            for i in range(4):
-                p1 = box[i]
-                p2 = box[(i + 1) % 4]
+                # 最長辺を取得して角度を求める
+                _, dx, dy = max(edges, key=lambda e: e[0])
+                detected_angle = np.degrees(np.arctan2(dy, dx))
 
-                dx = p2[0] - p1[0]
-                dy = p2[1] - p1[1]
+                # 長辺を垂直に揃えるための回転角算出
+                rotate_angle = 90 - detected_angle
 
-                length = math.hypot(dx, dy)
+                if rotate_angle > 90:
+                    rotate_angle -= 180
+                elif rotate_angle < -90:
+                    rotate_angle += 180
 
-                edges.append((length, dx, dy))
+                angle = -rotate_angle
+            else:
+                raise ReceiptValidationError(
+                    "文字を検出できませんでした。画像を明るく鮮明に撮影し直してください。"
+                )
 
-            # 最長辺を取得
-            _, dx, dy = max(edges, key=lambda e: e[0])
-
-            # 長辺の角度
-            angle = np.degrees(np.arctan2(dy, dx))
-
-            print("angle:", angle)  # デバッグ用
-
-            # 長辺を垂直に揃える
-            rotate_angle = 90 - angle
-
-            # 回転量を -90～90 に収める
-            if rotate_angle > 90:
-                rotate_angle -= 180
-            elif rotate_angle < -90:
-                rotate_angle += 180
-
-            angle = rotate_angle
-            angle = -angle
-
-        # 画像を回転
+        # 画像を回転補正
         (h, w) = resized_img.shape[:2]
         M = cv2.getRotationMatrix2D((w // 2, h // 2), angle, 1.0)
 
@@ -154,7 +148,8 @@ class ReceiptReader:
             borderValue=(255, 255, 255),
         )
 
-        # numpy arr → bytes変換
+
+        # 補正済みの numpy 配列を bytes 形式に変換して返却
         _, encoded_img = cv2.imencode(".png", rotated)
         img_bytes = encoded_img.tobytes()
 
@@ -164,7 +159,6 @@ class ReceiptReader:
     def file_read(self, img_bytes):
         client = vision.ImageAnnotatorClient()
         image = vision.Image(content=img_bytes)
-
         response = client.document_text_detection(image=image)
 
         return response.full_text_annotation
